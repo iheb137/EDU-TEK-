@@ -2,6 +2,8 @@ package tn.tekup.edutek.repository;
 
 import tn.tekup.edutek.entity.Presence;
 import org.springframework.data.jpa.repository.JpaRepository;
+
+import java.time.LocalDate;
 import java.util.List;
 
 public interface PresenceRepository extends JpaRepository<Presence, Long> {
@@ -9,4 +11,5 @@ public interface PresenceRepository extends JpaRepository<Presence, Long> {
     List<Presence> findBySeanceId(Long seanceId);
     List<Presence> findByEtudiantEmail(String email);
     List<Presence> findByEtudiantIdAndSeanceEnseignementSemestreId(Long etudiantId, Long semestreId);
+    List<Presence> findByEtudiantIdAndPresentFalseAndSeanceDateBetween(Long etudiantId, LocalDate debut, LocalDate fin);
 }
