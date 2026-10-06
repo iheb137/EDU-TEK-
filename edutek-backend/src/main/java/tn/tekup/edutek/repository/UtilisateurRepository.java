@@ -14,6 +14,7 @@ import java.util.Optional;
 public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> {
     Optional<Utilisateur> findByEmail(String email);
     boolean existsByEmail(String email);
+    boolean existsByEmailIgnoreCase(String email);
 
     @Query("select u from Utilisateur u where u.actif = true and "
          + "(lower(u.nom) like lower(concat('%', :q, '%')) or lower(u.prenom) like lower(concat('%', :q, '%'))) "
