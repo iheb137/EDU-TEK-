@@ -25,6 +25,9 @@ public class Actualite {
     @Column(name = "date_publication")
     private LocalDateTime datePublication = LocalDateTime.now();
 
+    @Column(name = "lien_document")
+    private String lienDocument;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "auteur_id", nullable = false)
     private AdminCommunication auteur;
