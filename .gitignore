@@ -1,0 +1,29 @@
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Secrets
+secrets.properties
+.env
+.env.*
+!.env.example
+
+# Frontend (Angular)
+node_modules/
+dist/
+.angular/
+
+# IA (Python)
+.venv/
+venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+
+# Donnees reelles d'etudiants : ne jamais versionner
+edutek-ia/data/
+
+# Systeme
+Thumbs.db
+.DS_Store
