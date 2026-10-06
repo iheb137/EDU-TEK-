@@ -22,6 +22,9 @@ public class TarifHoraire {
     @Column(name = "date_debut")
     private LocalDate dateDebut = LocalDate.now();
 
+    @Column(length = 100)
+    private String grade;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "defini_par_id")
     private AdminFinancier definiPar;
