@@ -41,6 +41,8 @@ public abstract class Utilisateur {
     @Column(nullable = false)
     private Boolean actif = true;
 
+    private Boolean mdpTemporaire = false;
+
     @Column(name = "date_creation")
     private LocalDateTime dateCreation = LocalDateTime.now();
 

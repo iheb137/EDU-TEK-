@@ -4,6 +4,7 @@ import tn.tekup.edutek.dto.AdminRequest;
 import tn.tekup.edutek.dto.AdminResponse;
 import tn.tekup.edutek.entity.*;
 import tn.tekup.edutek.repository.AdministrateurRepository;
+import tn.tekup.edutek.service.AuditService;
 import tn.tekup.edutek.repository.RoleRepository;
 import tn.tekup.edutek.repository.UtilisateurRepository;
 import jakarta.validation.Valid;
@@ -27,6 +28,7 @@ public class AdminController {
     private final UtilisateurRepository utilisateurRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService audit;
 
     @GetMapping
     @Transactional(readOnly = true)
@@ -58,6 +60,8 @@ public class AdminController {
         admin.setMotDePasse(passwordEncoder.encode(req.motDePasse()));
         Role role = roleRepository.findByNom(type).orElseThrow();
         admin.getRoles().add(role);
-        return AdminResponse.from(administrateurRepository.save(admin));
+        Administrateur cree = administrateurRepository.save(admin);
+        audit.log("ADMIN_CREE", "Utilisateur", cree.getId(), type + " " + cree.getEmail());
+        return AdminResponse.from(cree);
     }
 }

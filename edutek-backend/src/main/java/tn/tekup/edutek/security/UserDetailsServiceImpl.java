@@ -29,6 +29,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getNom().toUpperCase()))
                 .toList();
 
-        return new User(utilisateur.getEmail(), utilisateur.getMotDePasse(), Boolean.TRUE.equals(utilisateur.getActif()), true, true, true, authorities);
+        return new User(utilisateur.getEmail(), utilisateur.getMotDePasse(), Boolean.TRUE.equals(utilisateur.getActif()), true, !Boolean.TRUE.equals(utilisateur.getMdpTemporaire()), true, authorities);
     }
 }

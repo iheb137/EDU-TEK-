@@ -4,6 +4,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.CredentialsExpiredException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -26,6 +27,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> refuse(AccessDeniedException e) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(Map.of("erreur", "Acces refuse : droits insuffisants"));
+    }
+
+    @ExceptionHandler(CredentialsExpiredException.class)
+    public ResponseEntity<Map<String, String>> motDePasseATemporaire(CredentialsExpiredException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "erreur", "Mot de passe temporaire : changement obligatoire via /api/auth/changer-mot-de-passe",
+                "code", "MOT_DE_PASSE_A_CHANGER"));
     }
 
     @ExceptionHandler(AuthenticationException.class)
