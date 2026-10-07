@@ -123,6 +123,7 @@ public class UtilisateurAdminController {
         String temporaire = genererMotDePasse();
         u.setMotDePasse(passwordEncoder.encode(temporaire));
         u.setMdpTemporaire(true);
+        u.setMdpModifieLe(java.time.LocalDateTime.now());
         audit.log("MDP_REINITIALISE", "Utilisateur", id, u.getEmail());
         return ResponseEntity.ok()
                 .header(HttpHeaders.CACHE_CONTROL, "no-store")

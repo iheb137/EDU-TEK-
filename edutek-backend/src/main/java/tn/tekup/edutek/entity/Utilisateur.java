@@ -43,6 +43,9 @@ public abstract class Utilisateur {
 
     private Boolean mdpTemporaire = false;
 
+    @Column(name = "mdp_modifie_le")
+    private LocalDateTime mdpModifieLe;
+
     @Column(name = "date_creation")
     private LocalDateTime dateCreation = LocalDateTime.now();
 

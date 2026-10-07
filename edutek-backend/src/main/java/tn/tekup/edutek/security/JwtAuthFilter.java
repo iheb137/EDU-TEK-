@@ -15,6 +15,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
 
 @Component
 @RequiredArgsConstructor
@@ -37,7 +40,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
                     UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                    if (jwtUtil.isTokenValid(token, email) && userDetails.isEnabled() && userDetails.isCredentialsNonExpired()) {
+                    if (jwtUtil.isTokenValid(token, email)
+                            && userDetails.isEnabled()
+                            && userDetails.isCredentialsNonExpired()
+                            && emisApresChangementMotDePasse(token, userDetails)) {
                         UsernamePasswordAuthenticationToken authToken =
                                 new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
@@ -50,5 +56,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /** Un jeton emis avant le dernier changement de mot de passe est refuse (precision : la seconde). */
+    private boolean emisApresChangementMotDePasse(String token, UserDetails userDetails) {
+        if (userDetails instanceof UtilisateurPrincipal principal && principal.getMdpModifieLe() != null) {
+            Date emis = jwtUtil.extractIssuedAt(token);
+            Instant limite = principal.getMdpModifieLe().truncatedTo(ChronoUnit.SECONDS);
+            return emis != null && !emis.toInstant().isBefore(limite);
+        }
+        return true;
     }
 }
