@@ -10,6 +10,7 @@ import tn.tekup.edutek.entity.IndicateurAcademique;
 import tn.tekup.edutek.entity.ModeleIA;
 import tn.tekup.edutek.entity.ParametresRisque;
 import tn.tekup.edutek.entity.PredictionIA;
+import tn.tekup.edutek.entity.Recommandation;
 import tn.tekup.edutek.entity.Semestre;
 import tn.tekup.edutek.ia.ContratIa.DemandePrediction;
 import tn.tekup.edutek.ia.ContratIa.FacteurIa;
@@ -25,9 +26,11 @@ import tn.tekup.edutek.repository.IndicateurAcademiqueRepository;
 import tn.tekup.edutek.repository.ModeleIARepository;
 import tn.tekup.edutek.repository.ParametresRisqueRepository;
 import tn.tekup.edutek.repository.PredictionIARepository;
+import tn.tekup.edutek.repository.RecommandationRepository;
 import tn.tekup.edutek.repository.SemestreRepository;
 import tn.tekup.edutek.util.ModeleRegles;
 import tn.tekup.edutek.util.NiveauRisque;
+import tn.tekup.edutek.util.RecommandationsRegles;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -42,6 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -64,6 +69,7 @@ public class PredictionService {
     private final SemestreRepository semestreRepository;
     private final EnseignementRepository enseignementRepository;
     private final ClasseRepository classeRepository;
+    private final RecommandationRepository recommandationRepository;
     private final NotificationService notificationService;
 
     @Transactional
@@ -204,6 +210,50 @@ public class PredictionService {
         } else {
             alerte = null;
         }
+
+        mettreAJourRecommandations(etu, sem, niveau, reponse);
+
         return new Resultat(PredictionDto.from(saved, alerte != null ? alerte.getId() : null), creee);
+    }
+
+    /**
+     * Recommandations de l'etudiant : remplacees uniquement si l'ensemble des categories change
+     * (l'etat « lue » est sinon conserve) ; l'etudiant n'est notifie qu'a ce moment.
+     * Elles ne mentionnent jamais le score ni le niveau.
+     */
+    private void mettreAJourRecommandations(Etudiant etu, Semestre sem, String niveau, ReponsePrediction reponse) {
+        List<Recommandation> existantes = recommandationRepository.findByEtudiantIdAndSemestreId(etu.getId(), sem.getId());
+        Set<String> anciennes = existantes.stream().map(Recommandation::getCategorie)
+                .collect(Collectors.toCollection(TreeSet::new));
+
+        List<RecommandationsRegles.Texte> voulues;
+        if ("FAIBLE".equals(niveau)) {
+            voulues = List.of();
+        } else {
+            List<String> aggravants = reponse.facteurs().stream()
+                    .filter(f -> f.contribution() != null && f.contribution() > 0)
+                    .map(FacteurIa::nom)
+                    .toList();
+            voulues = RecommandationsRegles.generer(aggravants);
+        }
+        Set<String> nouvelles = voulues.stream().map(RecommandationsRegles.Texte::categorie)
+                .collect(Collectors.toCollection(TreeSet::new));
+
+        if (nouvelles.equals(anciennes)) {
+            return;
+        }
+        recommandationRepository.deleteAll(existantes);
+        for (RecommandationsRegles.Texte t : voulues) {
+            Recommandation r = new Recommandation();
+            r.setEtudiant(etu);
+            r.setSemestre(sem);
+            r.setCategorie(t.categorie());
+            r.setTexte(t.texte());
+            recommandationRepository.save(r);
+        }
+        if (!voulues.isEmpty()) {
+            notificationService.notifier(etu, "Nouvelles recommandations",
+                    "Des recommandations pour votre semestre " + sem.getNom() + " sont disponibles.");
+        }
     }
 }
