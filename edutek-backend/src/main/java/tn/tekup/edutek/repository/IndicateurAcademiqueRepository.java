@@ -8,4 +8,5 @@ public interface IndicateurAcademiqueRepository extends JpaRepository<Indicateur
     List<IndicateurAcademique> findByEtudiantIdAndSemestreId(Long etudiantId, Long semestreId);
     List<IndicateurAcademique> findBySemestreId(Long semestreId);
     List<IndicateurAcademique> findByEtudiantEmailAndSemestreId(String email, Long semestreId);
+    List<IndicateurAcademique> findByEtudiantId(Long etudiantId);
 }

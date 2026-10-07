@@ -38,7 +38,9 @@ public final class Libelles {
             Map.entry("Pointage", "Pointages"),
             Map.entry("Tarif", "Tarifs"),
             Map.entry("Paiement", "Paiements"),
-            Map.entry("Justificatif", "Justificatifs d'absence"));
+            Map.entry("Justificatif", "Justificatifs d'absence"),
+            Map.entry("AnalyseIa", "IA : analyses et prédictions"),
+            Map.entry("AlerteRisque", "IA : alertes et accompagnement"));
 
     private Libelles() {}
 
