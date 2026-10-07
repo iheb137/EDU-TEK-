@@ -43,7 +43,8 @@ public final class Libelles {
             Map.entry("AlerteRisque", "IA : alertes et accompagnement"),
             Map.entry("TableauDeBord", "IA : tableau de bord"),
             Map.entry("FeedbackPrediction", "IA : avis sur les prédictions"),
-            Map.entry("Recommandation", "Recommandations de l'étudiant"));
+            Map.entry("Recommandation", "Recommandations de l'étudiant"),
+            Map.entry("ModeleIa", "IA : cycle de vie des modèles"));
 
     private Libelles() {}
 
