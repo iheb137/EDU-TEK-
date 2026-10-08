@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-public class DemandeDocument {
+public class DemandeDocument extends EntiteEtablissement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

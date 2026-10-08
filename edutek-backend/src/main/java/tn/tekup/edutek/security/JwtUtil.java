@@ -32,6 +32,20 @@ public class JwtUtil {
                 .compact();
     }
 
+    public String generateToken(String email, String etablissement) {
+        return Jwts.builder()
+                .subject(email)
+                .claim("etab", etablissement)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + expiration))
+                .signWith(getSigningKey())
+                .compact();
+    }
+
+    public String extractEtablissement(String token) {
+        return extractClaim(token, c -> c.get("etab", String.class));
+    }
+
     public String extractEmail(String token) {
         return extractClaim(token, Claims::getSubject);
     }

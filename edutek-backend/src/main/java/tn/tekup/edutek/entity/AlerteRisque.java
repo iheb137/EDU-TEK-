@@ -13,7 +13,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class AlerteRisque {
+public class AlerteRisque extends EntiteEtablissement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

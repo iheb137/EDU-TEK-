@@ -11,7 +11,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Stage {
+public class Stage extends EntiteEtablissement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

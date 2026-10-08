@@ -12,7 +12,7 @@ import java.util.List;
 @Getter
 @Setter
 @NoArgsConstructor
-public class Classe {
+public class Classe extends EntiteEtablissement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

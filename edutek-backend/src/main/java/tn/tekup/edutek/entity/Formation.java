@@ -8,17 +8,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "formations")
+@Table(name = "formations", uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "code"}))
 @Getter
 @Setter
 @NoArgsConstructor
-public class Formation {
+public class Formation extends EntiteEtablissement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String code;
 
     @Column(nullable = false)

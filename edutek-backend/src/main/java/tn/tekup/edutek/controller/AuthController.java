@@ -72,7 +72,7 @@ public class AuthController {
         audit.logPour(utilisateur.getEmail(), "LOGIN", "Utilisateur", utilisateur.getId(), null);
 
         LoginResponse response = new LoginResponse();
-        response.setToken(jwtUtil.generateToken(utilisateur.getEmail()));
+        response.setToken(jwtUtil.generateToken(utilisateur.getEmail(), tn.tekup.edutek.util.EtablissementContexte.courant()));
         response.setEmail(utilisateur.getEmail());
         response.setNom(utilisateur.getNom());
         response.setPrenom(utilisateur.getPrenom());

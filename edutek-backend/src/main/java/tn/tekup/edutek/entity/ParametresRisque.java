@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @NoArgsConstructor
-public class ParametresRisque {
+public class ParametresRisque extends EntiteEtablissement {
 
     @Id
     private Long id;

@@ -6,17 +6,17 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "permissions")
+@Table(name = "permissions", uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "code"}))
 @Getter
 @Setter
 @NoArgsConstructor
-public class Permission {
+public class Permission extends EntiteEtablissement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String code;
 
     private String description;

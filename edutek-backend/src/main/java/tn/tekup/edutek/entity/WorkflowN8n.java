@@ -9,17 +9,17 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "workflows_n8n")
+@Table(name = "workflows_n8n", uniqueConstraints = @UniqueConstraint(columnNames = {"tenant_id", "nom"}))
 @Getter
 @Setter
 @NoArgsConstructor
-public class WorkflowN8n {
+public class WorkflowN8n extends EntiteEtablissement {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, length = 100)
     private String nom;
 
     private Boolean actif = true;
