@@ -25,6 +25,17 @@ public class Evaluation extends EntiteEtablissement {
 
     private Double coefficient;
 
+    @Column(name = "heure_debut")
+    private java.time.LocalTime heureDebut;
+
+    @Column(name = "duree_minutes")
+    private Integer dureeMinutes;
+
+    private String salle;
+
+    /** Copie anonyme (DS / examen barre) : saisie reservee a l'administration pedagogique (lot 7c). */
+    private Boolean anonyme = false;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "enseignement_id", nullable = false)
     private Enseignement enseignement;

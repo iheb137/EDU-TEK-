@@ -93,6 +93,13 @@ public class EvaluationController {
         ev.setType(dto.type());
         ev.setDate(dto.date());
         ev.setCoefficient(dto.coefficient());
+        if (dto.dureeMinutes() != null && dto.dureeMinutes() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La duree doit etre positive");
+        }
+        ev.setHeureDebut(dto.heureDebut());
+        ev.setDureeMinutes(dto.dureeMinutes());
+        ev.setSalle(dto.salle());
+        ev.setAnonyme(Boolean.TRUE.equals(dto.anonyme()));
         ev.setEnseignement(ens);
     }
 }

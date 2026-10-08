@@ -29,12 +29,13 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ResultatService {
 
-    private static final double SEUIL = 10.0;
+    
 
     private final EnseignementRepository enseignementRepository;
     private final EvaluationRepository evaluationRepository;
     private final NoteRepository noteRepository;
     private final ResultatSemestreRepository resultatRepository;
+    private final tn.tekup.edutek.service.RegleCalculService reglesService;
 
     @Transactional(readOnly = true)
     public BulletinDto bulletin(Etudiant etu, Semestre sem) {
@@ -54,11 +55,14 @@ public class ResultatService {
             parMatiere.computeIfAbsent(e.getMatiere().getId(), k -> new ArrayList<>()).add(e);
         }
 
+        tn.tekup.edutek.entity.RegleCalcul regles = reglesService.pour(sem.getFormation());
         List<LigneMatiereDto> lignes = new ArrayList<>();
         double sommePonderee = 0;
         double sommeCoefMatieres = 0;
         int credits = 0;
         boolean incomplet = false;
+        boolean matiereSousSeuil = false;
+        boolean matiereEliminatoire = false;
 
         for (List<Enseignement> groupe : parMatiere.values()) {
             Matiere m = groupe.get(0).getMatiere();
@@ -83,14 +87,20 @@ public class ResultatService {
 
             double coefMatiere = m.getCoefficient() != null ? m.getCoefficient() : 1.0;
             int creditsMatiere = m.getCredits() != null ? m.getCredits() : 0;
-            Double moyenneMatiere = totalCoefEval > 0 ? arrondi(totalNotes / totalCoefEval) : null;
-            boolean valide = moyenneMatiere != null && moyenneMatiere >= SEUIL;
+            Double moyenneMatiere = totalCoefEval > 0 ? arrondi(totalNotes / totalCoefEval, regles.getDecimales()) : null;
+            boolean valide = moyenneMatiere != null && moyenneMatiere >= regles.getSeuilAdmission();
 
             if (moyenneMatiere == null) {
                 incomplet = true;
             } else {
                 sommePonderee += moyenneMatiere * coefMatiere;
                 sommeCoefMatieres += coefMatiere;
+                if (!valide) {
+                    matiereSousSeuil = true;
+                }
+                if (regles.getNoteEliminatoire() != null && moyenneMatiere < regles.getNoteEliminatoire()) {
+                    matiereEliminatoire = true;
+                }
                 if (valide) {
                     credits += creditsMatiere;
                 }
@@ -99,10 +109,12 @@ public class ResultatService {
                     coefMatiere, creditsMatiere, moyenneMatiere, valide));
         }
 
-        Double moyenne = sommeCoefMatieres > 0 ? arrondi(sommePonderee / sommeCoefMatieres) : null;
+        Double moyenne = sommeCoefMatieres > 0 ? arrondi(sommePonderee / sommeCoefMatieres, regles.getDecimales()) : null;
         String decision = (incomplet || moyenne == null)
                 ? "INCOMPLET"
-                : (moyenne >= SEUIL ? "ADMIS" : "AJOURNE");
+                : (moyenne >= regles.getSeuilAdmission() && !matiereEliminatoire
+                        && (Boolean.TRUE.equals(regles.getCompensation()) || !matiereSousSeuil)
+                        ? "ADMIS" : "AJOURNE");
 
         return new BulletinDto(sem.getId(), sem.getNom(), etu.getId(), moyenne, credits, decision, lignes);
     }
@@ -120,7 +132,8 @@ public class ResultatService {
         return resultatRepository.save(r);
     }
 
-    private static double arrondi(double v) {
-        return Math.round(v * 100.0) / 100.0;
+    private static double arrondi(double v, int decimales) {
+        double facteur = Math.pow(10, decimales);
+        return Math.round(v * facteur) / facteur;
     }
 }

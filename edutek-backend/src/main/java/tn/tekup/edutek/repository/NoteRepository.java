@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface NoteRepository extends JpaRepository<Note, Long> {
     boolean existsByEvaluationIdAndEtudiantId(Long evaluationId, Long etudiantId);
+    boolean existsByEvaluationEnseignementClasseFormationId(Long formationId);
     List<Note> findByEvaluationId(Long evaluationId);
     List<Note> findByEtudiantEmail(String email);
     List<Note> findByEtudiantIdAndEvaluationEnseignementId(Long etudiantId, Long enseignementId);

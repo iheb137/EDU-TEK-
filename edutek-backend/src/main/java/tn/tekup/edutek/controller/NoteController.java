@@ -29,6 +29,7 @@ public class NoteController {
     private final EvaluationRepository evaluationRepository;
     private final EtudiantRepository etudiantRepository;
     private final AccesHelper acces;
+    private final tn.tekup.edutek.service.RegleCalculService reglesService;
 
     @GetMapping("/mes-notes")
     @Transactional(readOnly = true)
@@ -48,6 +49,7 @@ public class NoteController {
         Etudiant etu = etudiantRepository.findById(dto.etudiantId()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Etudiant introuvable : " + dto.etudiantId()));
         acces.verifierEtudiantDansClasse(etu, ev.getEnseignement());
+        reglesService.verifierNote(dto.valeur(), ev);
         if (noteRepository.existsByEvaluationIdAndEtudiantId(ev.getId(), etu.getId())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Une note existe deja pour cet etudiant et cette evaluation");
         }
@@ -65,6 +67,7 @@ public class NoteController {
         verifierValeur(dto.valeur());
         Note n = trouver(id);
         acces.verifierProprietaire(auth, n.getEvaluation().getEnseignement());
+        reglesService.verifierNote(dto.valeur(), n.getEvaluation());
         n.setValeur(dto.valeur());
         n.setCommentaire(dto.commentaire());
         return NoteDto.from(noteRepository.save(n));
@@ -85,7 +88,7 @@ public class NoteController {
     }
 
     private void verifierValeur(Double valeur) {
-        if (valeur < 0 || valeur > 20) {
+        if (valeur < 0 || valeur > 1000) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "La note doit etre comprise entre 0 et 20");
         }
     }
