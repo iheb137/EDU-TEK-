@@ -27,6 +27,9 @@ public class Notification {
 
     private Boolean lue = false;
 
+    @Column(name = "envoye_le")
+    private LocalDateTime envoyeLe;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "destinataire_id", nullable = false)
     private Utilisateur destinataire;

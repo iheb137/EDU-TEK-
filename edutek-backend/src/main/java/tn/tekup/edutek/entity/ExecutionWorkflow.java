@@ -27,6 +27,12 @@ public class ExecutionWorkflow {
     @Column(length = 1000)
     private String resultat;
 
+    @Column(name = "id_externe", length = 100)
+    private String idExterne;
+
+    @Column(name = "duree_ms")
+    private Long dureeMs;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workflow_id", nullable = false)
     private WorkflowN8n workflow;

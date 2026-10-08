@@ -30,6 +30,7 @@ public class SecurityConfig {
 
     private final UserDetailsServiceImpl userDetailsService;
     private final JwtAuthFilter jwtAuthFilter;
+    private final ApiKeyAuthFilter apiKeyAuthFilter;
 
     @Value("${app.cors.allowed-origins:http://localhost:4200}")
     private String originesAutorisees;
@@ -89,6 +90,7 @@ public class SecurityConfig {
                 })
             )
             .authenticationProvider(authenticationProvider())
+            .addFilterBefore(apiKeyAuthFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

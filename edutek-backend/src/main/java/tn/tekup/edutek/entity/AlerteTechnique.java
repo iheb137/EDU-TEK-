@@ -24,8 +24,16 @@ public class AlerteTechnique {
 
     private String niveau;
 
+    private String statut = "OUVERTE";
+
+    @Column(length = 100)
+    private String source;
+
     @Column(name = "date_creation")
     private LocalDateTime dateCreation = LocalDateTime.now();
+
+    @Column(name = "date_traitement")
+    private LocalDateTime dateTraitement;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "execution_id")

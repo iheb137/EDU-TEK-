@@ -44,7 +44,9 @@ public final class Libelles {
             Map.entry("TableauDeBord", "IA : tableau de bord"),
             Map.entry("FeedbackPrediction", "IA : avis sur les prédictions"),
             Map.entry("Recommandation", "Recommandations de l'étudiant"),
-            Map.entry("ModeleIa", "IA : cycle de vie des modèles"));
+            Map.entry("ModeleIa", "IA : cycle de vie des modèles"),
+            Map.entry("N8n", "n8n : points d'entrée des workflows"),
+            Map.entry("Supervision", "Supervision technique"));
 
     private Libelles() {}
 
