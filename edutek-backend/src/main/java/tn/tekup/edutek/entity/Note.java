@@ -20,6 +20,20 @@ public class Note extends EntiteEtablissement {
 
     private String commentaire;
 
+    /** BROUILLON (visible de l'enseignant seul) ou SOUMISE (visible de l'etudiant). Null = ancienne note, consideree soumise. */
+    @Column(length = 20)
+    private String statut = "BROUILLON";
+
+    @Column(name = "date_soumission")
+    private java.time.LocalDateTime dateSoumission;
+
+    @Column(name = "saisie_par")
+    private String saisiePar;
+
+    public boolean estSoumise() {
+        return statut == null || "SOUMISE".equals(statut);
+    }
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "evaluation_id", nullable = false)
     private Evaluation evaluation;

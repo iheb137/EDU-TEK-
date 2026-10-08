@@ -72,6 +72,7 @@ public class ResultatService {
             for (Enseignement ens : groupe) {
                 Map<Long, Note> notesParEval = noteRepository
                         .findByEtudiantIdAndEvaluationEnseignementId(etu.getId(), ens.getId()).stream()
+                        .filter(tn.tekup.edutek.entity.Note::estSoumise)
                         .collect(Collectors.toMap(x -> x.getEvaluation().getId(), x -> x, (a, b) -> a));
 
                 for (Evaluation ev : evaluationRepository.findByEnseignementId(ens.getId())) {

@@ -8,10 +8,11 @@ public record NoteDto(
         @NotNull Double valeur,
         String commentaire,
         @NotNull Long evaluationId,
-        @NotNull Long etudiantId
+        @NotNull Long etudiantId,
+        String statut
 ) {
     public static NoteDto from(Note n) {
         return new NoteDto(n.getId(), n.getValeur(), n.getCommentaire(),
-                n.getEvaluation().getId(), n.getEtudiant().getId());
+                n.getEvaluation().getId(), n.getEtudiant().getId(), n.estSoumise() ? "SOUMISE" : n.getStatut());
     }
 }

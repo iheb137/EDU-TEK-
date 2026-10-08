@@ -81,6 +81,7 @@ public class ResultatController {
     @PreAuthorize("hasRole('ETUDIANT')")
     public List<ResultatSemestreDto> mesResultats(Authentication auth) {
         return resultatRepository.findByEtudiantEmail(auth.getName()).stream()
+                .filter(r -> "PUBLIE".equals(r.getStatut()))
                 .map(ResultatSemestreDto::from).toList();
     }
 
@@ -90,7 +91,11 @@ public class ResultatController {
     public BulletinDto monBulletin(@RequestParam Long semestreId, Authentication auth) {
         Etudiant etu = etudiantRepository.findByEmail(auth.getName()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Etudiant introuvable"));
-        return resultatService.bulletin(etu, semestre(semestreId));
+        tn.tekup.edutek.dto.BulletinDto b = resultatService.bulletin(etu, semestre(semestreId));
+        boolean publie = resultatRepository.findByEtudiantIdAndSemestreId(etu.getId(), semestreId)
+                .map(x -> "PUBLIE".equals(x.getStatut())).orElse(false);
+        return publie ? b : new tn.tekup.edutek.dto.BulletinDto(b.semestreId(), b.semestreNom(), b.etudiantId(),
+                null, null, "EN_ATTENTE_PUBLICATION", b.matieres());
     }
 
     private Semestre semestre(Long id) {
