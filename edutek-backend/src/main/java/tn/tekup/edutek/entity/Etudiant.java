@@ -14,9 +14,12 @@ import java.util.List;
 @NoArgsConstructor
 public class Etudiant extends Utilisateur {
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String matricule;
 
+    /** Cle d'unicite par etablissement (etablissement:matricule), remplie par un trigger SQL (db/migration-9b.sql). */
+    @Column(name = "matricule_cle", insertable = false, updatable = false)
+    private String matriculeCle;
     private String niveau;
 
     @ManyToOne(fetch = FetchType.LAZY)

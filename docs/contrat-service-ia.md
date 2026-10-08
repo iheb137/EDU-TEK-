@@ -1,8 +1,10 @@
-# Contrat du service d'IA (FastAPI)
+# Contrat du service d'IA (FastAPI + PyTorch)
 
 Le backend Spring Boot appelle ce service pour estimer le risque academique d'un etudiant.
-Etat actuel : seul un FAUX service a regles (`stub-regles`) existe cote backend ; ce document
-decrit ce que le vrai service Python devra exposer.
+Service : dossier `edutek-ia/`, port 8000. Cote backend : `app.ia.mode=http` (`ServiceIaHttp`), ou `stub` (faux service a regles).
+
+Si la variable `IA_API_KEY` est definie cote service, toutes les routes sauf `/health` exigent l'en-tete `X-API-Key`
+(cote backend : propriete `app.ia.api-key`, dans `secrets.properties`).
 
 ## POST /predict
 
@@ -27,32 +29,39 @@ Requete :
     }
 
 - `indicateurs` : indicateurs du semestre analyse. Un indicateur sans donnee source est ABSENT
-  (pas de zero invente). Le service doit tolerer les absences.
-- `historique` : indicateurs des semestres anterieurs, du plus ancien au plus recent
-  (sequence utilisable par un modele recurrent LSTM/GRU). Peut etre vide.
+  (jamais un zero invente) : le modele le traite comme une donnee manquante. Les indicateurs inconnus sont ignores.
+- `historique` : indicateurs des semestres anterieurs, du plus ancien au plus recent (les 4 derniers sont utilises).
+  Peut etre vide.
 
 Reponse :
 
     {
-      "modele": { "nom": "lstm-risque", "version": "2026.10.1", "type": "DEEP_LEARNING" },
+      "modele": { "nom": "gru-risque-synth", "version": "2026.10.1", "type": "DEEP_LEARNING", "donnees": "SYNTHETIQUE" },
       "probabilite": 0.7312,
       "facteurs": [
-        { "nom": "TAUX_ABSENCE", "valeur": 0.25, "contribution": 0.84 },
-        { "nom": "MOYENNE_SEMESTRE", "valeur": 9.5, "contribution": 0.31 }
+        { "nom": "MOYENNE_SEMESTRE", "valeur": 9.5, "contribution": 0.84 },
+        { "nom": "HISTORIQUE_SEMESTRES", "valeur": 1.0, "contribution": -0.31 }
       ]
     }
 
-- `probabilite` : entre 0 et 1, probabilite de ne pas valider le semestre.
-- `facteurs` : explication de la prediction, tries par |contribution| decroissante ;
-  contribution > 0 augmente le risque, < 0 le reduit.
-- `modele.type` : `BASELINE`, `DEEP_LEARNING`, ... (le backend enregistre chaque couple nom + version).
+- `probabilite` : entre 0 et 1, probabilite de ne pas valider le semestre (calibree).
+- `facteurs` : tries par |contribution| decroissante. `contribution` = variation du log-odds du risque par rapport a un
+  etudiant moyen sur cet indicateur ; > 0 augmente le risque, < 0 le reduit. `HISTORIQUE_SEMESTRES` mesure l'effet
+  des semestres precedents (valeur = nombre de semestres utilises).
+- `modele.type` : `DEEP_LEARNING` pour un modele entraine. `modele.donnees` : `SYNTHETIQUE` ou `REELLE`
+  (champ supplementaire, ignore par le backend actuel). Un modele entraine sur donnees synthetiques porte le nom `gru-risque-synth`.
 
-## Autres routes prevues
+## Autres routes
 
-- `GET /health` : etat du service.
-- `GET /model` : modele actif (meme structure que `modele` ci-dessus).
-- `POST /train` : declenche un reentrainement (lot 5b).
+| Route | Role |
+|---|---|
+| `GET /health` | Etat du service et modele actif (`statut` : `ok` ou `sans_modele`). Sans cle d'API. |
+| `GET /model` | Modele actif (meme structure que `modele`). 503 si aucun modele actif. |
+| `GET /models` | Tous les modeles du registre (version, provenance des donnees, AUC test, actif). |
+| `POST /activate` | `{"nom": "...", "version": "..."}` : active un modele (404 inconnu, 409 incompatible). |
+| `POST /train` | Entraine un nouveau modele SANS l'activer. Corps : `source` (`synthetic` ou `csv`), `etudiants`, `fichier` (CSV du dossier `data/`), `graine`, `epoques`. Reponse : `modele` + `metriques` de test. Appel synchrone (quelques dizaines de secondes). |
 
 ## Erreurs
 
-Statuts HTTP habituels ; corps `{"erreur": "message"}`.
+Statuts HTTP habituels ; corps `{"erreur": "message"}` (400 requete invalide, 401 cle absente, 404 introuvable,
+409 conflit ou entrainement deja en cours, 422 corps mal forme, 503 aucun modele actif).

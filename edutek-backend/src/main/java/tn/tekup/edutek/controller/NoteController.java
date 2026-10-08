@@ -10,6 +10,7 @@ import tn.tekup.edutek.repository.EvaluationRepository;
 import tn.tekup.edutek.repository.NoteRepository;
 import tn.tekup.edutek.security.AccesHelper;
 import tn.tekup.edutek.service.AuditService;
+import tn.tekup.edutek.service.NoteSaisieService;
 import tn.tekup.edutek.service.NoteWorkflowService;
 import tn.tekup.edutek.service.RegleCalculService;
 import jakarta.validation.Valid;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -41,6 +41,7 @@ public class NoteController {
     private final AccesHelper acces;
     private final RegleCalculService reglesService;
     private final NoteWorkflowService workflow;
+    private final NoteSaisieService saisie;
     private final AuditService audit;
 
     @GetMapping("/mes-notes")
@@ -58,35 +59,12 @@ public class NoteController {
         verifierValeur(dto.valeur());
         Evaluation ev = evaluationRepository.findById(dto.evaluationId()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Evaluation introuvable : " + dto.evaluationId()));
-        Enseignement ens = ev.getEnseignement();
-        boolean admin = acces.estAdminPedagogie(auth);
-        acces.verifierProprietaire(auth, ens);
-        if (!admin) {
-            verifierSaisieEnseignant(ev, ens);
-        }
+        boolean admin = saisie.verifierDroits(ev, auth);
         Etudiant etu = etudiantRepository.findById(dto.etudiantId()).orElseThrow(() ->
                 new ResponseStatusException(HttpStatus.NOT_FOUND, "Etudiant introuvable : " + dto.etudiantId()));
-        acces.verifierEtudiantDansClasse(etu, ens);
-        if (noteRepository.existsByEvaluationIdAndEtudiantId(ev.getId(), etu.getId())) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Une note existe deja pour cet etudiant et cette evaluation");
-        }
-        reglesService.verifierNote(dto.valeur(), ev);
-        Note n = new Note();
-        n.setValeur(dto.valeur());
-        n.setCommentaire(dto.commentaire());
-        n.setEvaluation(ev);
-        n.setEtudiant(etu);
-        n.setSaisiePar(auth.getName());
+        Note saved = saisie.creer(ev, etu, dto.valeur(), dto.commentaire(), admin, auth.getName());
         if (admin) {
-            n.setStatut("SOUMISE");
-            n.setDateSoumission(LocalDateTime.now());
-        } else {
-            n.setStatut("BROUILLON");
-        }
-        Note saved = noteRepository.save(n);
-        if (admin) {
-            workflow.notifierNote(saved, "Nouvelle note");
-            workflow.invaliderResultats(ens.getSemestre().getId());
+            workflow.invaliderResultats(ev.getEnseignement().getSemestre().getId());
         }
         return NoteDto.from(saved);
     }

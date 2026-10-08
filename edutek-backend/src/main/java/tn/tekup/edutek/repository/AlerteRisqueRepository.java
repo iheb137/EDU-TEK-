@@ -17,8 +17,13 @@ public interface AlerteRisqueRepository extends JpaRepository<AlerteRisque, Long
 
     Optional<AlerteRisque> findByPredictionId(Long predictionId);
 
-    Optional<AlerteRisque> findFirstByPredictionEtudiantIdAndPredictionSemestreIdAndStatutInOrderByDateDetectionDesc(
-            Long etudiantId, Long semestreId, Collection<String> statuts);
+    @Query("select a from AlerteRisque a where a.prediction.id in (select p.id from PredictionIA p where p.etudiant.id = :etudiantId and p.semestre.id = :semestreId) and a.statut in :statuts order by a.dateDetection desc, a.id desc")
+    List<AlerteRisque> chercherAlertes(@Param("etudiantId") Long etudiantId, @Param("semestreId") Long semestreId, @Param("statuts") Collection<String> statuts);
+
+    default Optional<AlerteRisque> findFirstByPredictionEtudiantIdAndPredictionSemestreIdAndStatutInOrderByDateDetectionDesc(
+            Long etudiantId, Long semestreId, Collection<String> statuts) {
+        return chercherAlertes(etudiantId, semestreId, statuts).stream().findFirst();
+    }
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AlerteRisque a where a.id = :id")

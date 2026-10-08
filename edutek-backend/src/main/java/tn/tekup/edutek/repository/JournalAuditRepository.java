@@ -12,4 +12,8 @@ public interface JournalAuditRepository extends JpaRepository<JournalAudit, Long
     @Query("select j from JournalAudit j where lower(j.acteurEmail) like lower(concat('%', :acteur, '%')) "
          + "and j.action like concat(:action, '%')")
     Page<JournalAudit> rechercher(@Param("acteur") String acteur, @Param("action") String action, Pageable pageable);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("delete from JournalAudit j where j.horodatage < :limite")
+    int supprimerAvant(@Param("limite") java.time.LocalDateTime limite);
 }

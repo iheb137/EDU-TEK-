@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+# Modeles entraines et donnees : jamais dans Git (donnees d'etudiants = donnees personnelles)
+models/*
+!models/.gitkeep
+data/*
+!data/.gitkeep

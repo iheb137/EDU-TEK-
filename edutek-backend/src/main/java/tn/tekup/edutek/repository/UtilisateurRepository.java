@@ -13,8 +13,10 @@ import java.util.Optional;
 
 public interface UtilisateurRepository extends JpaRepository<Utilisateur, Long> {
     Optional<Utilisateur> findByEmail(String email);
-    boolean existsByEmail(String email);
-    boolean existsByEmailIgnoreCase(String email);
+    @Query(value = "select exists(select 1 from utilisateurs where lower(email) = lower(:email))", nativeQuery = true)
+    boolean existsByEmail(@Param("email") String email);
+    @Query(value = "select exists(select 1 from utilisateurs where lower(email) = lower(:email))", nativeQuery = true)
+    boolean existsByEmailIgnoreCase(@Param("email") String email);
 
     @Query("select u from Utilisateur u where u.actif = true and "
          + "(lower(u.nom) like lower(concat('%', :q, '%')) or lower(u.prenom) like lower(concat('%', :q, '%'))) "

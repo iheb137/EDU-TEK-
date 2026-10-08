@@ -46,7 +46,17 @@ public final class Libelles {
             Map.entry("Recommandation", "Recommandations de l'étudiant"),
             Map.entry("ModeleIa", "IA : cycle de vie des modèles"),
             Map.entry("N8n", "n8n : points d'entrée des workflows"),
-            Map.entry("Supervision", "Supervision technique"));
+            Map.entry("Supervision", "Supervision technique"),
+            Map.entry("RegleCalcul", "Règles de calcul"),
+            Map.entry("EvenementAcademique", "Calendrier académique"),
+            Map.entry("Calendrier", "Calendrier académique"),
+            Map.entry("PlanEtudes", "Plan d'études"),
+            Map.entry("NotesWorkflow", "Notes : saisie, soumission, clôture"),
+            Map.entry("PublicationResultats", "Résultats : calcul et publication"),
+            Map.entry("Plateforme", "Plateforme : établissements"),
+            Map.entry("ImportNotes", "Notes : import CSV"),
+            Map.entry("Statistiques", "Statistiques"),
+            Map.entry("AuditPurge", "Journal d'audit"));
 
     private Libelles() {}
 
