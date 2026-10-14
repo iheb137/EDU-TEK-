@@ -12,10 +12,10 @@ resources:
 images:
   - name: edutek-backend
     newName: ghcr.io/iheb137/edutek-backend
-    newTag: sha-eccce68
+    newTag: sha-96fd0c4
   - name: edutek-front
     newName: ghcr.io/iheb137/edutek-front
-    newTag: sha-eccce68
+    newTag: sha-96fd0c4
   - name: edutek-ia
     newName: ghcr.io/iheb137/edutek-ia
-    newTag: sha-eccce68
+    newTag: sha-96fd0c4
