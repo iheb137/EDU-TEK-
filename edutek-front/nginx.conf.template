@@ -1,0 +1,24 @@
+server {
+    listen 8080;
+    root /usr/share/nginx/html;
+    index index.html;
+
+    client_max_body_size 21m;   # uploads des supports de cours (20 Mo)
+
+    location /api/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header Origin "";
+        proxy_read_timeout 120s;
+    }
+
+    location ~ ^/(swagger-ui|v3)/ {
+        proxy_pass ${BACKEND_URL};
+    }
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}

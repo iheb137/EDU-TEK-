@@ -1,0 +1,6 @@
+target/
+uploads/
+secrets.properties
+*.ps1
+.idea/
+*.iml
