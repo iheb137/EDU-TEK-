@@ -1,0 +1,107 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ---------- 1. Secrets oubliés dans le code ----------
+  secrets:
+    name: Scan des secrets (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------- 2. Backend Spring Boot ----------
+  backend:
+    name: Backend (Maven + tests)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: edutek-backend
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: edutek_db
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci-password-jetable
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ci"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/edutek_db
+      SPRING_DATASOURCE_USERNAME: ci
+      SPRING_DATASOURCE_PASSWORD: ci-password-jetable
+      SPRING_JPA_SHOW_SQL: "false"
+      JWT_SECRET: cle-de-test-ci-uniquement-0123456789abcdefghijklmnopqrstuvwxyz0123456789
+      APP_SEED_ADMIN_EMAIL: admin@ci.local
+      APP_SEED_ADMIN_PASSWORD: Ci@2026-jetable
+      APP_SEED_PLATEFORME_EMAIL: plateforme@ci.local
+      APP_SEED_PLATEFORME_PASSWORD: Ci@2026-jetable
+      APP_IA_MODE: stub
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - run: mvn -B verify
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rapports-tests-backend
+          path: edutek-backend/target/surefire-reports/
+
+  # ---------- 3. Frontend Angular ----------
+  front:
+    name: Frontend (build production)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: edutek-front
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: edutek-front/package-lock.json
+      - run: npm ci
+      - run: npx ng build --configuration production
+
+  # ---------- 4. Service IA ----------
+  ia:
+    name: Service IA (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: edutek-ia
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: edutek-ia/requirements*.txt
+      - run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q --junitxml=rapport-pytest.xml
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: rapport-tests-ia
+          path: edutek-ia/rapport-pytest.xml
