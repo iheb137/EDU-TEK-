@@ -7,7 +7,7 @@ COPY . .
 RUN npx ng build --configuration production
 
 # ---------- Étape 2 : service par nginx ----------
-FROM nginxinc/nginx-unprivileged:1.28-alpine
+FROM nginxinc/nginx-unprivileged:1.30-alpine
 USER root
 RUN apk upgrade --no-cache          # correctifs de sécurité Alpine (OpenSSL...)
 USER 101
