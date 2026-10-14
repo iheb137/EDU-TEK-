@@ -7,6 +7,7 @@ resources:
   - 20-backend.yaml
   - 30-ia.yaml
   - 40-front.yaml
+  - 50-smoke-tests.yaml
 
 images:
   - name: edutek-backend

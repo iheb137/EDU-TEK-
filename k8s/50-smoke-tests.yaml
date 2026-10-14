@@ -1,0 +1,49 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: smoke-tests
+  namespace: edutek
+  annotations:
+    argocd.argoproj.io/hook: PostSync                         # lancé après chaque déploiement
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation # l'ancien Job est remplacé au suivant
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: smoke
+          image: curlimages/curl:8.11.1
+          env:
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: edutek-app, key: APP_SEED_ADMIN_PASSWORD }
+            - name: IA_API_KEY
+              valueFrom:
+                secretKeyRef: { name: edutek-ia, key: IA_API_KEY }
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits:   { memory: 64Mi }
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              ECHECS=0
+              verifier() {
+                if [ "$2" = "$3" ]; then echo "OK    $1 ($3)";
+                else echo "ECHEC $1 : attendu $2, obtenu $3"; ECHECS=$((ECHECS+1)); fi
+              }
+              code() { curl -s -o /dev/null -w "%{http_code}" --max-time 10 "$@"; }
+
+              verifier "Frontend : page d'accueil"        200 "$(code http://front/)"
+              verifier "Frontend : route Angular (F5)"    200 "$(code http://front/mes-cours)"
+              verifier "API protegee sans jeton"          401 "$(code http://front/api/semestres)"
+              verifier "Connexion administrateur"         200 "$(code -X POST http://front/api/auth/login \
+                  -H 'Content-Type: application/json' -H 'X-Etablissement: tekup' \
+                  -d "{\"email\":\"admin@tekup.tn\",\"motDePasse\":\"$ADMIN_PASSWORD\"}")"
+              verifier "IA : /health"                     200 "$(code http://ia:8000/health)"
+              verifier "IA : /model sans cle refuse"      401 "$(code http://ia:8000/model)"
+              verifier "IA : /model avec cle"             200 "$(code -H "X-API-Key: $IA_API_KEY" http://ia:8000/model)"
+
+              echo "------------------------------------------"
+              if [ "$ECHECS" -eq 0 ]; then echo "SMOKE TESTS : 7/7 OK"; exit 0;
+              else echo "SMOKE TESTS : $ECHECS echec(s)"; exit 1; fi
