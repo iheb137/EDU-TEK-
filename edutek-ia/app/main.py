@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
@@ -66,8 +67,8 @@ def _predictionneur() -> Predictionneur:
     return p
 
 
-@app.exception_handler(HTTPException)
-async def erreur_http(_: Request, exc: HTTPException):
+@app.exception_handler(StarletteHTTPException)
+async def erreur_http(_: Request, exc: StarletteHTTPException):
     return JSONResponse({"erreur": str(exc.detail)}, status_code=exc.status_code)
 
 

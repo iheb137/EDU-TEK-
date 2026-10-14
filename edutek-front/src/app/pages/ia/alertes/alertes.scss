@@ -1,0 +1,11 @@
+.btn.clair { text-decoration: none; }
+.compteurs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+@media (max-width: 900px) { .compteurs { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); } }
+.filtres select.champ { min-width: 170px; }
+.tri { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font: inherit; letter-spacing: inherit; text-transform: inherit; color: var(--indigo);
+  &:focus-visible { outline: 2px solid var(--indigo); border-radius: 4px; } }
+.cliquable { cursor: pointer; }
+a.nom { color: var(--ink); &:hover { color: var(--indigo); text-decoration: underline; } }
+a.icone { text-decoration: none; }
+.vide { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.lien-btn { all: unset; cursor: pointer; color: var(--indigo); font-weight: 700; font-size: 13.5px; &:hover { text-decoration: underline; } &:focus-visible { outline: 2px solid var(--indigo); } }

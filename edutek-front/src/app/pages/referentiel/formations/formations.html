@@ -1,0 +1,84 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Référentiel pédagogique</p>
+    <h1>Formations</h1>
+    <p class="intro">Les formations regroupent semestres, matières et classes. Ouvrez une formation pour consulter son plan d'études et définir ses règles de calcul des moyennes.</p>
+  </div>
+  @if (peutEcrire) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="nouvelle()"><app-icon nom="add" [taille]="18" />Nouvelle formation</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="carte tableau rise" style="animation-delay: .1s">
+  @if (chargement() && !formations().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (lignes().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Code</th><th>Intitulé</th><th>Niveau</th><th class="num">Semestres</th><th class="num">Classes</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (f of lignes(); track f.id) {
+            <tr>
+              <td><span class="code">{{ f.code }}</span></td>
+              <td><a class="lien" [routerLink]="['/formations', f.id]">{{ f.nom }}</a></td>
+              <td class="gris">{{ f.niveau || '—' }}</td>
+              <td class="num">{{ f.nbSemestres }}</td>
+              <td class="num">{{ f.nbClasses }}</td>
+              <td>
+                <div class="actions">
+                  <a class="icone" title="Plan d'études et règles de calcul" [attr.aria-label]="'Plan d\'études et règles de calcul de ' + f.code" [routerLink]="['/formations', f.id]"><app-icon nom="library" [taille]="19" /></a>
+                  @if (peutEcrire) {
+                    <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier la formation ' + f.code" (click)="modifier(f)"><app-icon nom="pencil" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer la formation ' + f.code" (click)="demanderSuppression(f)"><app-icon nom="trash" [taille]="19" /></button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination"><span>{{ lignes().length }} formation{{ lignes().length > 1 ? 's' : '' }}</span></div>
+  } @else {
+    <p class="vide">Aucune formation n'est encore définie. Créez la première pour pouvoir y rattacher semestres et classes.</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('editer') {
+    <app-modal [titre]="cible() ? 'Modifier la formation' : 'Nouvelle formation'" [largeur]="560" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f">
+          <label for="fo-code">Code</label>
+          <input id="fo-code" formControlName="code" placeholder="ex. GLSI" autocomplete="off">
+          @if (formulaire.controls.code.touched && formulaire.controls.code.invalid) { <span class="erreur-champ">Code obligatoire (30 caractères au plus).</span> }
+        </div>
+        <div class="champ-f">
+          <label for="fo-niveau">Niveau (facultatif)</label>
+          <input id="fo-niveau" formControlName="niveau" placeholder="ex. Cycle ingénieur" autocomplete="off">
+        </div>
+        <div class="champ-f large">
+          <label for="fo-nom">Intitulé</label>
+          <input id="fo-nom" formControlName="nom" autocomplete="off">
+          @if (formulaire.controls.nom.touched && formulaire.controls.nom.invalid) { <span class="erreur-champ">Intitulé obligatoire.</span> }
+        </div>
+        <button type="submit" hidden></button>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-confirmation titre="Supprimer la formation" [message]="'Supprimer la formation « ' + cible()?.nom + ' » (' + cible()?.code + ') ?'"
+      [detail]="detailSuppression()"
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="supprimer()" (fermer)="fermer()" />
+  }
+}

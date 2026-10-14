@@ -1,0 +1,78 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Support · {{ auth.session()?.etablissement }}</p>
+    <h1>Tableau de bord</h1>
+    <p class="intro">Ce qui attend le service support aujourd'hui : justificatifs d'absence à examiner et demandes de documents à traiter.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" [disabled]="chargement()" (click)="charger()"><app-icon nom="refresh" [taille]="18" />Actualiser</button>
+    <a class="btn indigo" routerLink="/justificatifs" [queryParams]="{ statut: 'SOUMIS' }"><app-icon nom="medkit" [taille]="18" />Traiter les justificatifs</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="indicateurs" aria-label="Indicateurs">
+  @for (k of indicateurs(); track k.titre; let i = $index) {
+    <a class="carte indicateur rise" [routerLink]="k.lien" [style.animation-delay]="delai(i)">
+      <div class="ligne"><span class="titre">{{ k.titre }}</span><span class="pastille" [style.background]="k.couleur"><app-icon [nom]="k.icone" [taille]="21" /></span></div>
+      <div class="valeur">{{ chargement() ? '…' : k.valeur }}</div>
+      <span class="note">{{ k.note }}</span>
+    </a>
+  }
+</section>
+
+<div class="duo">
+  <section class="carte rise grand" style="animation-delay: .45s">
+    <div class="ligne">
+      <h2>Justificatifs à traiter</h2>
+      @if (aTraiter().length) { <span class="note">Du plus ancien au plus récent</span> }
+    </div>
+    @if (chargement()) {
+      <p class="vide sans-marge">Chargement…</p>
+    } @else if (aTraiter().length) {
+      <ul class="file">
+        @for (j of aTraiter().slice(0, 6); track j.id) {
+          <li>
+            <a [routerLink]="'/justificatifs'" [queryParams]="{ id: j.id }">
+              <span class="qui"><strong>{{ j.etudiantNom }}</strong><span class="gris">{{ j.etudiantMatricule }}</span></span>
+              <span class="quoi">{{ periode(j.dateDebut, j.dateFin) }}<span class="gris">{{ libelleMotif(j.motif) }}@if (j.pieceUrl) { · pièce jointe }</span></span>
+              <span class="quand">{{ quand(j.dateSoumission) }}</span>
+              <app-icon nom="chevron-forward" [taille]="18" />
+            </a>
+          </li>
+        }
+      </ul>
+      <a class="lien bas" routerLink="/justificatifs" [queryParams]="{ statut: 'SOUMIS' }">Toute la file ({{ aTraiter().length }})<app-icon nom="arrow-forward" [taille]="16" /></a>
+    } @else {
+      <p class="vide sans-marge">Aucun justificatif en attente : la file est à jour.</p>
+    }
+  </section>
+
+  <section class="carte rise petit" style="animation-delay: .55s">
+    <h2>Demandes de documents par statut</h2>
+    <div class="statuts">
+      @for (s of parStatut(); track s.statut; let i = $index) {
+        <a class="statut" routerLink="/demandes-documents" [queryParams]="{ statut: s.statut }">
+          <div class="ligne"><strong>{{ s.libelle }}</strong><span class="note">{{ chargement() ? '…' : s.n }}</span></div>
+          <div class="piste"><div class="remplissage" [style.width.%]="s.part" [style.background]="s.couleur" [style.animation-delay]="delai(i, 0.7)"></div></div>
+        </a>
+      }
+    </div>
+    @if (demandesOuvertes().length) {
+      <h3 class="sous-titre">Prochaines demandes</h3>
+      <ul class="ouvertes">
+        @for (d of demandesOuvertes().slice(0, 4); track d.id) {
+          <li><span><strong>{{ libelleType(d.typeDocument) }}</strong> · {{ d.etudiantNom }}</span><span [class]="'puce ' + puce(d.statut)">{{ libelleStatut(d.statut) }}</span></li>
+        }
+      </ul>
+    }
+    <a class="lien bas" routerLink="/demandes-documents">Toutes les demandes<app-icon nom="arrow-forward" [taille]="16" /></a>
+  </section>
+</div>
+
+<section class="raccourcis" aria-label="Raccourcis">
+  <a class="carte raccourci rise" style="animation-delay: .7s" routerLink="/justificatifs"><span class="pastille"><app-icon nom="medkit" [taille]="21" /></span><span><strong>Justificatifs d'absence</strong><span class="sous">Valider ou rejeter avec motif</span></span></a>
+  <a class="carte raccourci rise" style="animation-delay: .78s" routerLink="/demandes-documents"><span class="pastille"><app-icon nom="document-attach" [taille]="21" /></span><span><strong>Demandes de documents</strong><span class="sous">Attestations et relevés de notes</span></span></a>
+  <a class="carte raccourci rise" style="animation-delay: .86s" routerLink="/calendrier"><span class="pastille"><app-icon nom="calendar" [taille]="21" /></span><span><strong>Calendrier</strong><span class="sous">Rentrée, vacances, examens</span></span></a>
+</section>

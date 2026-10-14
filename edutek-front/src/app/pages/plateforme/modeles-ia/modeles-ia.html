@@ -1,0 +1,252 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Intelligence artificielle</p>
+    <h1>Modèles IA</h1>
+    <p class="intro">Registre des modèles de détection du risque d'échec, évaluation de leurs prédictions sur les résultats réels des étudiants, mise en production et ré-entraînement.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" (click)="ouvrirEnregistrement()"><app-icon nom="add" [taille]="18" />Enregistrer un modèle</button>
+    <button class="btn indigo" type="button" (click)="ouvrirReentrainement()"><app-icon nom="sync" [taille]="18" />Ré-entraîner</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (synthetiques().length) {
+  <div class="avertissement rise" role="note" style="animation-delay: .06s">
+    <app-icon nom="alert-circle" [taille]="22" />
+    <p><strong>{{ synthetiques().length }} modèle{{ synthetiques().length > 1 ? 's' : '' }} entraîné{{ synthetiques().length > 1 ? 's' : '' }} sur des données synthétiques.</strong>
+      Ces données sont générées par programme : elles n'ont jamais concerné de vrais étudiants. Les scores obtenus à l'entraînement ne prouvent donc pas la qualité du modèle dans l'établissement ; vérifiez l'évaluation sur données réelles ci-dessous avant toute mise en production.</p>
+  </div>
+}
+
+<section class="carte tableau rise" style="animation-delay: .1s">
+  <div class="tete-carte">
+    <h2>Registre des modèles</h2>
+    @if (enProduction(); as p) { <span class="note">En production : <strong>{{ p.nom }} {{ p.version }}</strong></span> }
+    @else if (modeles()?.length) { <span class="note">Aucun modèle en production : les prédictions utilisent le service par défaut.</span> }
+  </div>
+  @if (chargement() && !modeles()) {
+    <p class="vide">Chargement…</p>
+  } @else if (modeles(); as l) {
+    @if (l.length) {
+      <div class="defile">
+        <table>
+          <thead>
+            <tr>
+              <th>Modèle</th><th>Type</th><th>Statut</th><th>Données d'entraînement</th>
+              <th class="num" title="Mesurée sur les résultats réels du semestre évalué ci-dessous">AUC réelle</th>
+              <th class="num" title="Au seuil de l'évaluation ci-dessous">F1 réel</th>
+              <th><span class="visuel-cache">Actions</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (m of l; track m.id) {
+              @let src = source(m);
+              @let ev = parModele().get(m.id);
+              <tr>
+                <td><span class="nom">{{ m.nom }}</span><br><span class="note">Version {{ m.version }}</span></td>
+                <td class="gris">{{ libelleType(m.type) }}</td>
+                <td><span class="puce" [class.vert]="m.statut === 'EN_PRODUCTION'" [class.gris]="m.statut === 'ARCHIVE'" [class.orange]="m.statut === 'STUB'">{{ libelleStatut(m.statut) }}</span></td>
+                <td>
+                  <span class="puce" [class.synthetique]="src === 'SYNTHETIQUE'" [class.vert]="src === 'REELLE'" [class.gris]="src === 'AUCUNE' || src === 'INCONNUE'">{{ libelleSource(src) }}</span>
+                  @if (src === 'INCONNUE') { <br><span class="note">L'API ne transmet pas la provenance.</span> }
+                </td>
+                <td class="num">{{ ev ? fmt(ev.auc) : '—' }}</td>
+                <td class="num">{{ ev ? fmt(ev.f1) : '—' }}</td>
+                <td>
+                  <div class="actions">
+                    @for (t of transitions(m); track t.cible) {
+                      <button class="icone" type="button" [title]="t.libelle" [attr.aria-label]="t.libelle + ' : ' + m.nom + ' ' + m.version" (click)="demanderStatut(m, t.cible, t.libelle)"><app-icon [nom]="t.icone" [taille]="19" /></button>
+                    } @empty {
+                      @if (m.statut === 'STUB') { <span class="note">Non modifiable</span> }
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="vide">Aucun modèle enregistré pour le moment. Ré-entraînez un modèle ou enregistrez-en un existant.</p>
+    }
+  }
+</section>
+
+<section class="carte evaluation rise" style="animation-delay: .18s">
+  <div class="tete-carte">
+    <div>
+      <h2>Évaluation comparée sur données réelles</h2>
+      <p class="note sous-titre">Les dernières prédictions de chaque modèle sont confrontées aux résultats réels des étudiants du semestre.</p>
+    </div>
+  </div>
+  @if (semestres().length) {
+  <form class="filtres" (submit)="$event.preventDefault(); evaluer()">
+    <select class="champ" aria-label="Semestre évalué" (change)="semestreId.set(+$any($event.target).value)">
+      @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestreId()">{{ s.nom }}</option> }
+    </select>
+    <select class="champ" aria-label="Classe" (change)="classeId.set($any($event.target).value)">
+      <option value="">Toutes les classes</option>
+      @for (c of classes(); track c.id) { <option [value]="c.id" [selected]="'' + c.id === classeId()">{{ c.nom }}</option> }
+    </select>
+    <label class="seuil" for="m-seuil">Seuil d'alerte
+      <input id="m-seuil" class="champ" inputmode="decimal" placeholder="0,4" [value]="seuil()" (input)="seuil.set($any($event.target).value)">
+    </label>
+    <button class="btn marine" type="submit" [disabled]="chargeEval() || !semestreId()"><app-icon nom="analytics" [taille]="18" />{{ chargeEval() ? 'Calcul…' : 'Évaluer' }}</button>
+  </form>
+  }
+
+  @if (erreurEval()) { <p class="bandeau" role="alert">{{ erreurEval() }}</p> }
+
+  @if (semestresCharges() && !semestres().length) {
+    <p class="vide">Aucun semestre n'est défini dans cet établissement : l'évaluation sur données réelles n'est pas possible.</p>
+  } @else if (chargeEval() && !evaluation()) {
+    <p class="vide">Chargement…</p>
+  } @else if (evaluation(); as r) {
+    @if (r.avertissement) { <p class="info-eval"><app-icon nom="information-circle" [taille]="18" /><span>{{ r.avertissement }}</span></p> }
+    @if (r.modeles.length) {
+      <div class="defile">
+        <table class="comparaison">
+          <thead>
+            <tr>
+              <th>Indicateur <span class="note">(seuil {{ fmt(r.seuil) }})</span></th>
+              @for (e of r.modeles; track e.modele.id) {
+                <th class="col-modele">
+                  <span class="nom-modele">{{ e.modele.nom }} {{ e.modele.version }}</span>
+                  <span class="puces">
+                    <span class="puce" [class.vert]="e.modele.statut === 'EN_PRODUCTION'" [class.orange]="e.modele.statut === 'STUB'" [class.gris]="e.modele.statut === 'ARCHIVE'">{{ libelleStatut(e.modele.statut) }}</span>
+                    @if (source(e.modele) === 'SYNTHETIQUE') { <span class="puce synthetique">Synthétique</span> }
+                  </span>
+                </th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (k of metriques; track k.cle) {
+              @let top = meilleur(k.cle, k.inverse);
+              <tr>
+                <td><span class="nom">{{ k.libelle }}</span><br><span class="note">{{ k.aide }}</span></td>
+                @for (e of r.modeles; track e.modele.id) {
+                  @let v = valeur(e, k.cle);
+                  <td>
+                    <div class="mesure" [class.meilleur]="top !== null && v === top">
+                      <span class="chiffre">{{ fmt(v) }}</span>
+                      <span class="barre" aria-hidden="true"><span [class.inverse]="k.inverse" [style.width.%]="largeur(v)"></span></span>
+                    </div>
+                  </td>
+                }
+              </tr>
+            }
+            <tr>
+              <td><span class="nom">Matrice de confusion</span><br><span class="note">Signalés ou non, face aux échecs réels.</span></td>
+              @for (e of r.modeles; track e.modele.id) {
+                <td>
+                  <table class="matrice" [attr.aria-label]="'Matrice de confusion de ' + e.modele.nom">
+                    <tr><th></th><th>Échec réel</th><th>Réussite</th></tr>
+                    <tr><th>Signalé</th><td class="bon" title="Vrais positifs">{{ e.vp }}</td><td class="mauvais" title="Faux positifs">{{ e.fp }}</td></tr>
+                    <tr><th>Non signalé</th><td class="mauvais" title="Faux négatifs">{{ e.fn }}</td><td class="bon" title="Vrais négatifs">{{ e.vn }}</td></tr>
+                  </table>
+                </td>
+              }
+            </tr>
+            <tr>
+              <td><span class="nom">Échantillon</span></td>
+              @for (e of r.modeles; track e.modele.id) {
+                <td>
+                  {{ e.nbEtudiants }} étudiant{{ e.nbEtudiants > 1 ? 's' : '' }} · {{ e.positifsReels }} échec{{ e.positifsReels > 1 ? 's' : '' }} réel{{ e.positifsReels > 1 ? 's' : '' }}
+                  @if (e.exclus) { <br><span class="note">{{ e.exclus }} exclu{{ e.exclus > 1 ? 's' : '' }} (sans résultat)</span> }
+                  <br><span class="puce" [class.vert]="e.echantillonSuffisant" [class.orange]="!e.echantillonSuffisant">{{ e.echantillonSuffisant ? 'Échantillon suffisant' : 'Échantillon trop petit pour conclure' }}</span>
+                </td>
+              }
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="vide">Aucun modèle n'a encore produit de prédiction pour {{ nomSemestre() || 'ce semestre' }}{{ classeId() ? ' et cette classe' : '' }}. Lancez une analyse IA sur ce semestre pour pouvoir l'évaluer.</p>
+    }
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('statut') {
+    @if (cible(); as c) {
+      <app-modal [titre]="c.libelle" [largeur]="540" (fermer)="fermer()">
+        <p class="aide">{{ c.libelle }} <strong>{{ c.modele.nom }} {{ c.modele.version }}</strong> ?<br>Le statut passera de « {{ libelleStatut(c.modele.statut).toLowerCase() }} » à « <strong>{{ libelleStatut(c.statut).toLowerCase() }}</strong> ».</p>
+        @if (c.statut === 'EN_PRODUCTION') {
+          <p class="gris aide">Toutes les prochaines analyses de risque utiliseront ce modèle.@if (enProduction(); as p) { Le modèle actuellement en production ({{ p.nom }} {{ p.version }}) repassera au statut « entraîné ».}</p>
+          @if (source(c.modele) === 'SYNTHETIQUE') {
+            <div class="avertissement compact" role="note"><app-icon nom="alert-circle" [taille]="20" /><p>Ce modèle a été entraîné uniquement sur des <strong>données synthétiques</strong>. Assurez-vous que son évaluation sur données réelles est satisfaisante avant de l'utiliser pour signaler des étudiants.</p></div>
+          }
+        }
+        @if (c.modele.statut === 'EN_PRODUCTION' && c.statut !== 'EN_PRODUCTION') {
+          <p class="gris aide">Plus aucun modèle ne sera en production : les analyses utiliseront le service par défaut jusqu'à la promotion d'un autre modèle.</p>
+        }
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn indigo" type="button" [disabled]="enCours()" (click)="confirmerStatut()">{{ enCours() ? 'Enregistrement…' : c.libelle }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('reentrainer') {
+    <app-modal titre="Ré-entraîner un modèle" [largeur]="560" (fermer)="fermer()">
+      @if (resultatEntrainement(); as m) {
+        <p class="bandeau ok" role="status" style="margin-top:0">Entraînement terminé : <strong>{{ m.nom }} {{ m.version }}</strong> est ajouté au registre avec le statut « {{ libelleStatut(m.statut).toLowerCase() }} ».</p>
+        <p class="gris aide" style="margin-top:14px">Il n'est pas mis en production automatiquement : évaluez-le d'abord, puis promouvez-le depuis le registre.</p>
+        @if (source(m) === 'SYNTHETIQUE') { <p class="note aide">Ce modèle a été entraîné sur des données synthétiques.</p> }
+        <div class="pied"><button class="btn indigo" type="button" (click)="fermer()">Terminé</button></div>
+      } @else {
+        <p class="aide">Le service d'IA va entraîner une nouvelle version du modèle. Elle sera ajoutée au registre sans être mise en production.</p>
+        <div class="avertissement compact" role="note"><app-icon nom="hourglass" [taille]="20" /><p><strong>Opération longue :</strong> l'entraînement peut durer plusieurs minutes (jusqu'à 5 minutes). Gardez cette fenêtre ouverte jusqu'à la fin.</p></div>
+        <p class="note aide">Sauf configuration contraire du serveur, l'entraînement utilise des données synthétiques générées par le service d'IA.</p>
+        @if (enCours()) { <p class="en-cours" role="status"><span class="roue" aria-hidden="true"></span>Entraînement en cours…</p> }
+        @if (erreurFenetre()) {
+          <div class="bandeau" role="alert">
+            <strong>{{ nonPrisEnCharge() ? 'Ré-entraînement non disponible' : indisponible() ? 'Ré-entraînement impossible pour le moment' : 'Échec du ré-entraînement' }}</strong><br>{{ erreurFenetre() }}
+            @if (nonPrisEnCharge()) { <br><span class="petit">Le serveur fonctionne avec le faux service d'IA (règles fixes). Le ré-entraînement nécessite le vrai service d'IA.</span> }
+          </div>
+        }
+        <div class="pied">
+          <button class="btn clair" type="button" [disabled]="enCours()" (click)="fermer()">{{ erreurFenetre() ? 'Fermer' : 'Annuler' }}</button>
+          @if (!nonPrisEnCharge()) {
+            <button class="btn indigo" type="button" [disabled]="enCours()" (click)="reentrainer()">{{ enCours() ? 'Entraînement…' : erreurFenetre() ? 'Réessayer' : 'Lancer l\'entraînement' }}</button>
+          }
+        </div>
+      }
+    </app-modal>
+  }
+
+  @case ('enregistrer') {
+    <app-modal titre="Enregistrer un modèle" [largeur]="560" (fermer)="fermer()">
+      <p class="gris aide">Déclarez un modèle déjà entraîné par le service d'IA (même nom et même version que dans le service). Il est enregistré avec le statut « entraîné ».</p>
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f">
+          <label for="m-nom">Nom</label>
+          <input id="m-nom" formControlName="nom" placeholder="ex. gru-risque" autocomplete="off">
+          @if (formulaire.controls.nom.touched && formulaire.controls.nom.invalid) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="m-version">Version</label>
+          <input id="m-version" formControlName="version" placeholder="ex. 2026.10.1" autocomplete="off">
+          @if (formulaire.controls.version.touched && formulaire.controls.version.invalid) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="m-type">Type</label>
+          <select id="m-type" formControlName="type">
+            @for (t of typesEnregistrables; track t) { <option [value]="t">{{ libelleType(t) }}</option> }
+          </select>
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

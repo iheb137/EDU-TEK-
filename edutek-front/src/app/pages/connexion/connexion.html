@@ -1,0 +1,74 @@
+<div class="ecran">
+  <div class="fond" aria-hidden="true"></div>
+  <div class="grille" aria-hidden="true"></div>
+  <div class="voile" aria-hidden="true"></div>
+
+  <main class="carte">
+    <div class="tete">
+      <div class="logo">
+        <div class="halo"></div>
+        <img src="images/logo-edutek.png" alt="Logo Edu-Tek" width="96" height="96">
+      </div>
+      <h1>EDU-TEK</h1>
+      <div class="barre"></div>
+      <p class="accroche">Suivi et accompagnement académique</p>
+    </div>
+
+    <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="soumettre()" novalidate>
+      <div class="champ s2">
+        <label for="etab">Établissement</label>
+        <div class="saisie">
+          <app-icon class="pre" nom="business" [taille]="19" />
+          <input id="etab" type="text" formControlName="etablissement" placeholder="Code de l'établissement" autocomplete="organization"
+                 [attr.aria-invalid]="envoye() && formulaire.controls.etablissement.invalid">
+        </div>
+        @if (envoye() && formulaire.controls.etablissement.invalid) { <span class="erreur" role="alert">Indiquez le code de votre établissement.</span> }
+      </div>
+
+      <div class="champ s3">
+        <label for="mail">Adresse e-mail</label>
+        <div class="saisie">
+          <app-icon class="pre" nom="mail" [taille]="19" />
+          <input id="mail" type="email" formControlName="email" placeholder="prenom.nom@etablissement.tn" autocomplete="username"
+                 [attr.aria-invalid]="envoye() && formulaire.controls.email.invalid">
+        </div>
+        @if (envoye() && formulaire.controls.email.invalid) { <span class="erreur" role="alert">Saisissez une adresse e-mail valide.</span> }
+      </div>
+
+      <div class="champ s4">
+        <div class="ligne">
+          <label for="mdp">Mot de passe</label>
+          <a href="mailto:administration@edu-tek.tn" class="oubli">Mot de passe oublié ?</a>
+        </div>
+        <div class="saisie">
+          <app-icon class="pre" nom="lock-closed" [taille]="19" />
+          <input id="mdp" [type]="mdpVisible() ? 'text' : 'password'" formControlName="motDePasse" placeholder="••••••••" autocomplete="current-password"
+                 [attr.aria-invalid]="envoye() && formulaire.controls.motDePasse.invalid">
+          <button class="oeil" type="button" (click)="basculerMdp()" [attr.aria-label]="mdpVisible() ? 'Masquer le mot de passe' : 'Afficher le mot de passe'">
+            <app-icon [nom]="mdpVisible() ? 'eye-off' : 'eye'" [taille]="21" />
+          </button>
+        </div>
+        @if (envoye() && formulaire.controls.motDePasse.invalid) { <span class="erreur" role="alert">Saisissez votre mot de passe.</span> }
+      </div>
+
+      @if (changement()) {
+        <div class="champ">
+          <label for="nmdp">Nouveau mot de passe</label>
+          <div class="saisie">
+            <app-icon class="pre" nom="lock-closed" [taille]="19" />
+            <input id="nmdp" type="password" formControlName="nouveauMdp" placeholder="8 caractères minimum" autocomplete="new-password">
+          </div>
+        </div>
+      }
+      @if (erreur()) { <p class="alerte-form" role="alert">{{ erreur() }}</p> }
+
+      <button class="valider s5" type="submit" [disabled]="enCours()">{{ enCours() ? 'Connexion…' : changement() ? 'Changer et se connecter' : 'Se connecter' }}</button>
+    </form>
+
+    <p class="aide s5">Accès réservé aux membres de l'établissement.<br>Besoin d'aide ? <a href="mailto:administration@edu-tek.tn">Contacter l'administration</a></p>
+  </main>
+
+  <footer class="bas s5">
+    <span>© {{ annee }} Edu-Tek</span><span>TEK-UP University</span>
+  </footer>
+</div>

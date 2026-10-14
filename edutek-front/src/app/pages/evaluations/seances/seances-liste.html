@@ -1,0 +1,136 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Pédagogie</p>
+    <h1>Séances et présences</h1>
+    <p class="intro">Planifiez les séances de cours de {{ admin() ? 'chaque enseignement' : 'vos enseignements' }} et ouvrez la feuille de présence pour pointer les étudiants.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/evaluations"><app-icon nom="document-text" [taille]="18" />Évaluations</a>
+    <button class="btn indigo" type="button" [disabled]="!ref.enseignements().length" (click)="ouvrirCreation()"><app-icon nom="add" [taille]="18" />Nouvelle séance</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <select class="champ" aria-label="Filtrer par semestre" (change)="filtrer('semestre', $any($event.target).value)">
+    <option value="" [selected]="!semestre()">Tous les semestres</option>
+    @for (s of ref.semestres(); track s.id) { <option [value]="s.id" [selected]="semestre() === s.id">{{ s.nom }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par classe" (change)="filtrer('classe', $any($event.target).value)">
+    <option value="" [selected]="!classe()">Toutes les classes</option>
+    @for (c of ref.classes(); track c.id) { <option [value]="c.id" [selected]="classe() === c.id">{{ c.nom }}</option> }
+  </select>
+  <select class="champ large" aria-label="Filtrer par enseignement" (change)="filtrer('enseignement', $any($event.target).value)">
+    <option value="" [selected]="!enseignement()">Tous les enseignements</option>
+    @for (e of enseignementsFiltre(); track e.id) { <option [value]="e.id" [selected]="enseignement() === e.id">{{ ref.libelleEnseignement(e.id) }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par période" (change)="filtrer('periode', $any($event.target).value)">
+    <option value="toutes" [selected]="periode() === 'toutes'">Toutes les dates</option>
+    <option value="passees" [selected]="periode() === 'passees'">Passées et du jour</option>
+    <option value="avenir" [selected]="periode() === 'avenir'">À venir et du jour</option>
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !seances()) {
+    <p class="vide">Chargement…</p>
+  } @else if (seances()) {
+    @if (filtrees().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Date</th><th>Horaire</th><th>Matière</th><th>Classe</th><th>Salle</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (s of pageCourante(); track s.id) {
+              <tr>
+                <td><a class="nom lien" [routerLink]="['/seances', s.id]">{{ date(s.date) }}</a></td>
+                <td>{{ heure(s.heureDebut) }} – {{ heure(s.heureFin) }}</td>
+                <td>{{ ref.matiereDe(s.enseignementId)?.nom }}</td>
+                <td>{{ ref.classeDe(s.enseignementId)?.nom }}</td>
+                <td>{{ s.salle || '–' }}</td>
+                <td>
+                  <div class="actions">
+                    <a class="icone" [routerLink]="['/seances', s.id]" title="Feuille de présence" [attr.aria-label]="'Feuille de présence du ' + date(s.date)"><app-icon nom="checkbox" [taille]="19" /></a>
+                    <button class="icone" type="button" title="Modifier la séance" [attr.aria-label]="'Modifier la séance du ' + date(s.date)" (click)="ouvrirModification(s)"><app-icon nom="pencil" [taille]="18" /></button>
+                    <button class="icone danger" type="button" title="Supprimer la séance" [attr.aria-label]="'Supprimer la séance du ' + date(s.date)" (click)="demanderSuppression(s)"><app-icon nom="trash" [taille]="18" /></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span>{{ filtrees().length }} séance{{ filtrees().length > 1 ? 's' : '' }} · page {{ numero() + 1 }} sur {{ pages() }}</span>
+        <div class="boutons">
+          <button class="icone" type="button" aria-label="Page précédente" [disabled]="numero() <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+          <button class="icone" type="button" aria-label="Page suivante" [disabled]="numero() + 1 >= pages()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+        </div>
+      </div>
+    } @else if (!ref.enseignements().length) {
+      <p class="vide">Aucun enseignement ne vous est affecté pour le moment.</p>
+    } @else {
+      <p class="vide">Aucune séance pour ces critères. Changez les filtres ou planifiez une séance.</p>
+    }
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('formulaire') {
+    <app-modal [titre]="cible() ? 'Modifier la séance' : 'Nouvelle séance'" [largeur]="600" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="se-ens">Enseignement</label>
+          <select id="se-ens" formControlName="enseignementId">
+            <option [ngValue]="0" disabled>Choisir un enseignement</option>
+            @for (g of groupesFormulaire(); track g.semestre.id) {
+              <optgroup [label]="g.semestre.nom">
+                @for (e of g.enseignements; track e.id) { <option [ngValue]="e.id">{{ ref.libelleEnseignement(e.id) }}</option> }
+              </optgroup>
+            }
+          </select>
+          @if (formulaire.controls.enseignementId.touched && formulaire.controls.enseignementId.invalid) { <span class="erreur-champ">Choisissez un enseignement.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="se-date">Date</label>
+          <input id="se-date" type="date" formControlName="date">
+          @if (formulaire.controls.date.touched && formulaire.controls.date.invalid) { <span class="erreur-champ">Date obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="se-salle">Salle</label>
+          <input id="se-salle" formControlName="salle" autocomplete="off" placeholder="ex. B12">
+        </div>
+        <div class="champ-f">
+          <label for="se-debut">Heure de début</label>
+          <input id="se-debut" type="time" formControlName="heureDebut">
+          @if (formulaire.controls.heureDebut.touched && formulaire.controls.heureDebut.invalid) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="se-fin">Heure de fin</label>
+          <input id="se-fin" type="time" formControlName="heureFin">
+          @if (formulaire.controls.heureFin.touched && formulaire.controls.heureFin.invalid) { <span class="erreur-champ">Obligatoire.</span> }
+          @if (erreurHoraire()) { <span class="erreur-champ">L'heure de fin doit suivre l'heure de début.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : (cible() ? 'Enregistrer' : 'Créer la séance') }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-modal titre="Supprimer la séance" [largeur]="500" (fermer)="fermer()">
+      @if (cible(); as c) {
+        <p class="texte">Supprimer la séance du <strong>{{ date(c.date) }}</strong> ({{ heure(c.heureDebut) }} – {{ heure(c.heureFin) }}) · {{ ref.libelleEnseignement(c.enseignementId) }} ?</p>
+        <p class="texte alerte">Les présences déjà pointées pour cette séance seront également supprimées.</p>
+      }
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn rouge" type="button" [disabled]="enCours()" (click)="supprimer()">{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

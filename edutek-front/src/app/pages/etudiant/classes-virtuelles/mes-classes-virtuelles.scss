@@ -1,0 +1,9 @@
+.classes { margin-top: 22px; display: flex; flex-direction: column; gap: 14px; }
+.classe { display: flex; align-items: center; gap: 18px; padding: 18px 22px; }
+.classe .corps { flex: 1; min-width: 0; h2 { font-size: 16.5px; } p { margin: 4px 0 0; font-size: 14px; } }
+.classe .date-bloc { width: 60px; padding: 9px 0; b { font-size: 22px; } }
+.classe.passee .date-bloc { background: #eef0f5; color: var(--muted); }
+.code { font-size: 13.5px !important; color: var(--muted); strong { color: var(--ink); font-family: ui-monospace, Consolas, monospace; } }
+.boutons-classe { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.segments { align-self: center; }
+@media (max-width: 720px) { .classe { flex-wrap: wrap; } .boutons-classe { width: 100%; justify-content: flex-start; } }

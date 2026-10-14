@@ -1,0 +1,254 @@
+<a class="retour" routerLink="/evaluations"><app-icon nom="arrow-back" [taille]="16" />Toutes les évaluations</a>
+
+@if (chargement() && !evaluation()) {
+  <p class="vide">Chargement…</p>
+}
+@if (erreur() && !evaluation()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (evaluation(); as ev) {
+  <div class="entete rise">
+    <div>
+      <p class="surtitre">{{ matiere()?.code }} · {{ classe()?.nom }} · {{ semestre()?.nom }}</p>
+      <h1>{{ libelleType(ev.type) }} · {{ matiere()?.nom ?? 'Enseignement n° ' + ev.enseignementId }}</h1>
+      <dl class="fiche entete-fiche">
+        <div><dt>Date</dt><dd>{{ date(ev.date) || 'Non précisée' }}</dd></div>
+        <div><dt>Horaire</dt><dd>{{ ev.heureDebut ? heure(ev.heureDebut) : '–' }}@if (ev.dureeMinutes) { · {{ ev.dureeMinutes }} min }</dd></div>
+        <div><dt>Salle</dt><dd>{{ ev.salle || '–' }}</dd></div>
+        <div><dt>Coefficient</dt><dd>{{ nombre(ev.coefficient) || '–' }}</dd></div>
+        <div><dt>Correction</dt><dd>{{ ev.anonyme ? 'Anonyme' : 'Nominative' }}</dd></div>
+      </dl>
+    </div>
+    <div class="boutons">
+      <button class="btn clair" type="button" (click)="exporter()" [disabled]="!notes().length"><app-icon nom="download" [taille]="18" />Exporter</button>
+      @if (peutSaisir()) {
+        <button class="btn clair" type="button" (click)="ouvrirImport()"><app-icon nom="cloud-upload" [taille]="18" />Importer (CSV)</button>
+        <button class="btn indigo" type="button" [disabled]="!compteurs().brouillons || nbModifiees() > 0" [title]="nbModifiees() ? 'Enregistrez d\'abord vos modifications' : (compteurs().brouillons ? '' : 'Aucune note en brouillon')" (click)="ouvrir('soumettre')"><app-icon nom="send" [taille]="18" />Soumettre les notes</button>
+      }
+    </div>
+  </div>
+
+  @if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+  @if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+  @if (erreursEnregistrement().length) {
+    <div class="bandeau" role="alert"><strong>{{ erreursEnregistrement().length }} note(s) non enregistrée(s) :</strong>
+      <ul class="liste-bandeau">@for (m of erreursEnregistrement(); track $index) { <li>{{ m }}</li> }</ul>
+    </div>
+  }
+
+  <section class="carte etat rise" style="animation-delay: .08s" aria-label="État de la saisie">
+    <div class="etat-bloc">
+      <span class="etat-titre">Saisie</span>
+      <div class="avancement">
+        <div class="jauge large"><span class="soumis" [style.width.%]="compteurs().attendues ? compteurs().soumises / compteurs().attendues * 100 : 0"></span><span class="brouillon" [style.width.%]="compteurs().attendues ? compteurs().brouillons / compteurs().attendues * 100 : 0"></span></div>
+        <strong>{{ compteurs().brouillons + compteurs().soumises }} / {{ compteurs().attendues }}</strong>
+      </div>
+      <div class="puces">
+        <span class="puce orange">{{ compteurs().brouillons }} brouillon{{ compteurs().brouillons > 1 ? 's' : '' }}</span>
+        <span class="puce vert">{{ compteurs().soumises }} soumise{{ compteurs().soumises > 1 ? 's' : '' }}</span>
+        <span class="puce gris">{{ compteurs().attendues - compteurs().brouillons - compteurs().soumises }} manquante{{ compteurs().attendues - compteurs().brouillons - compteurs().soumises > 1 ? 's' : '' }}</span>
+      </div>
+    </div>
+    <div class="etat-bloc">
+      <span class="etat-titre">Enseignement</span>
+      @if (avancement(); as a) {
+        @if (a.cloture) {
+          <p class="etat-ligne"><app-icon nom="lock-closed" [taille]="18" /><span><strong>Clôturé</strong>@if (a.dateCloture) { le {{ dateHeure(a.dateCloture) }} }</span></p>
+        } @else {
+          <p class="etat-ligne ouvert"><app-icon nom="lock-open" [taille]="18" /><span><strong>Saisie ouverte</strong> · {{ a.evaluations.length }} évaluation{{ a.evaluations.length > 1 ? 's' : '' }}</span></p>
+        }
+      } @else { <p class="etat-ligne gris">État indisponible</p> }
+    </div>
+    <div class="etat-actions">
+      @if (avancement(); as a) {
+        @if (!a.cloture) {
+          <button class="btn clair" type="button" (click)="ouvrir('cloturer')"><app-icon nom="lock-closed" [taille]="17" />Clôturer l'enseignement</button>
+        } @else if (admin()) {
+          <button class="btn clair" type="button" (click)="ouvrir('rouvrir')"><app-icon nom="lock-open" [taille]="17" />Rouvrir la saisie</button>
+        }
+      }
+    </div>
+  </section>
+
+  <div class="colonnes">
+    <section class="carte grille rise" style="animation-delay: .14s" (keydown)="raccourci($event)">
+      <header class="grille-tete">
+        <div>
+          <h2>Notes des étudiants</h2>
+          @if (raisonLectureSeule()) {
+            <p class="lecture-seule"><app-icon nom="information-circle" [taille]="17" />{{ raisonLectureSeule() }}</p>
+          } @else {
+            <p class="aide">Tapez la note puis <kbd>Entrée</kbd> pour passer à l'étudiant suivant, flèches <kbd>haut</kbd> / <kbd>bas</kbd> pour naviguer, <kbd>Échap</kbd> annule la cellule, <kbd>Ctrl</kbd> + <kbd>S</kbd> enregistre. Note sur {{ nombre(noteMax()) }}, virgule ou point acceptés.@if (!admin()) { Les notes sont enregistrées en brouillon jusqu'à leur soumission. }</p>
+          }
+        </div>
+        <div class="recherche petite">
+          <app-icon nom="search" [taille]="17" />
+          <input type="search" placeholder="Nom ou matricule" aria-label="Rechercher un étudiant" [value]="recherche()" (input)="recherche.set($any($event.target).value)">
+        </div>
+      </header>
+
+      @if (chargement()) {
+        <p class="vide">Chargement…</p>
+      } @else if (!lignes().length) {
+        <p class="vide">Aucun étudiant n'est rattaché à cette classe : la grille de saisie est vide.</p>
+      } @else {
+        <div class="defile">
+          <table class="saisie">
+            <thead><tr><th class="n">N°</th><th>Étudiant</th><th class="col-note">Note / {{ nombre(noteMax()) }}</th><th>Commentaire</th><th>Statut</th></tr></thead>
+            <tbody>
+              @for (l of lignesAffichees(); track l.etudiant.id; let i = $index) {
+                <tr [class.modifiee]="l.modifiee" [class.en-erreur]="l.invalide || l.erreur">
+                  <td class="n gris">{{ i + 1 }}</td>
+                  <td><span class="nom">{{ l.etudiant.nom }} {{ l.etudiant.prenom }}</span><br><span class="gris petit">{{ l.etudiant.matricule }}</span></td>
+                  <td class="col-note">
+                    @if (l.verrouillee) {
+                      <span class="valeur-fixe">{{ l.valeur || '–' }}</span>
+                    } @else {
+                      <input class="cellule" [id]="'note-' + i" type="text" inputmode="decimal" autocomplete="off" maxlength="6"
+                        [value]="l.valeur" [attr.aria-label]="'Note de ' + l.etudiant.prenom + ' ' + l.etudiant.nom" [attr.aria-invalid]="l.invalide"
+                        (input)="saisir(l, 'valeur', $any($event.target).value)" (keydown)="touche($event, i, 'note', l)" (focus)="$any($event.target).select()">
+                    }
+                    @if (l.invalide) { <span class="erreur-champ">0 à {{ nombre(noteMax()) }}</span> }
+                  </td>
+                  <td>
+                    @if (l.verrouillee) {
+                      <span class="gris petit">{{ l.commentaire }}</span>
+                    } @else {
+                      <input class="cellule com" [id]="'com-' + i" type="text" autocomplete="off" maxlength="250" [value]="l.commentaire"
+                        [attr.aria-label]="'Commentaire pour ' + l.etudiant.prenom + ' ' + l.etudiant.nom"
+                        (input)="saisir(l, 'commentaire', $any($event.target).value)" (keydown)="touche($event, i, 'com', l)">
+                    }
+                  </td>
+                  <td>
+                    <span class="puce" [class.vert]="!l.modifiee && l.note?.statut === 'SOUMISE'" [class.orange]="!l.modifiee && l.note?.statut === 'BROUILLON'" [class.gris]="!l.modifiee && !l.note">{{ statutLibelle(l) }}</span>
+                    @if (l.erreur) { <span class="erreur-ligne" [title]="l.erreur"><app-icon nom="alert-circle" [taille]="16" /></span> }
+                  </td>
+                </tr>
+              } @empty {
+                <tr><td colspan="5" class="gris">Aucun étudiant ne correspond à « {{ recherche() }} ».</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (peutSaisir()) {
+          <div class="barre-enregistrement" [class.active]="nbModifiees() > 0">
+            <span>
+              @if (nbModifiees()) { <strong>{{ nbModifiees() }}</strong> modification{{ nbModifiees() > 1 ? 's' : '' }} non enregistrée{{ nbModifiees() > 1 ? 's' : '' }}@if (nbInvalides()) { · <span class="rouge">{{ nbInvalides() }} invalide{{ nbInvalides() > 1 ? 's' : '' }}</span>} }
+              @else { Toutes les notes sont enregistrées. }
+            </span>
+            <div class="boutons">
+              <button class="btn clair" type="button" [disabled]="!nbModifiees() || enregistrement()" (click)="annulerModifications()">Annuler les modifications</button>
+              <button class="btn indigo" type="button" [disabled]="!nbModifiees() || enregistrement() || nbInvalides() > 0" (click)="enregistrer()"><app-icon nom="checkmark" [taille]="18" />{{ enregistrement() ? 'Enregistrement…' : 'Enregistrer les notes' }}</button>
+            </div>
+          </div>
+        }
+      }
+    </section>
+
+    <aside class="carte stats rise" style="animation-delay: .2s">
+      <header class="stats-tete">
+        <h2>Statistiques</h2>
+        <label class="bascule"><input type="checkbox" [checked]="inclureBrouillons()" (change)="basculerBrouillons($any($event.target).checked)">Inclure les brouillons</label>
+      </header>
+      @if (stats(); as s) {
+        <p class="gris petit stats-intro">{{ s.saisies }} note{{ s.saisies > 1 ? 's' : '' }} saisie{{ s.saisies > 1 ? 's' : '' }} sur {{ s.attendus }} attendue{{ s.attendus > 1 ? 's' : '' }}@if (s.brouillons) { · dont {{ s.brouillons }} en brouillon }</p>
+        @if (s.stats.effectif) {
+          <app-bloc-stats [stats]="s.stats" [seuil]="s.seuilReussite" [noteMax]="s.noteMax" />
+        } @else {
+          <p class="vide compacte">Pas encore de note {{ inclureBrouillons() ? 'saisie' : 'soumise' }} pour calculer des statistiques.@if (!inclureBrouillons() && s.brouillons) { Cochez « Inclure les brouillons » pour les prendre en compte. }</p>
+        }
+      } @else {
+        <p class="vide compacte">Statistiques indisponibles.</p>
+      }
+    </aside>
+  </div>
+}
+
+@switch (fenetre()) {
+  @case ('import') {
+    <app-modal titre="Importer des notes (CSV)" [largeur]="680" (fermer)="fermer()">
+      <div class="explication">
+        <p>Le fichier contient une ligne d'en-tête puis une ligne par étudiant, 300 lignes au plus, encodé en UTF-8 :</p>
+        <code class="bloc">matricule;valeur;commentaire
+DEMO-0001;14,5;Bon travail
+DEMO-0002;9;</code>
+        <ul>
+          <li><strong>matricule</strong> : celui de l'étudiant, qui doit appartenir à la classe {{ classe()?.nom }} ;</li>
+          <li><strong>valeur</strong> : note de 0 à {{ nombre(noteMax()) }}, virgule ou point décimal ;</li>
+          <li><strong>commentaire</strong> : facultatif. Le séparateur peut être le point-virgule ou la virgule.</li>
+        </ul>
+        <p>Les étudiants qui ont déjà une note sont signalés en erreur (aucune note existante n'est remplacée), de même que les lignes sans valeur. Les notes importées sont enregistrées {{ admin() ? 'directement à l\'état soumis' : 'en brouillon' }}.
+          <button class="lien-btn" type="button" (click)="telechargerModele()">Télécharger le modèle pré-rempli</button> (étudiants sans note).</p>
+      </div>
+      <input class="fichier" type="file" accept=".csv,text/csv" aria-label="Fichier CSV des notes" (change)="choisirFichier($event)">
+      <div class="options">
+        <label><input type="checkbox" [checked]="simulation" (change)="simulation = $any($event.target).checked"> Simulation : vérifier le fichier sans rien enregistrer</label>
+        <label><input type="checkbox" [checked]="ignorerErreurs" (change)="ignorerErreurs = $any($event.target).checked"> Ignorer les lignes en erreur et importer les autres</label>
+      </div>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      @if (resultatImport(); as r) {
+        <div class="resume" role="status">
+          <span class="puce">{{ r.lignesLues }} ligne{{ r.lignesLues > 1 ? 's' : '' }} lue{{ r.lignesLues > 1 ? 's' : '' }}</span>
+          <span class="puce vert">{{ r.lignesValides }} valide{{ r.lignesValides > 1 ? 's' : '' }}</span>
+          @if (r.erreurs.length) { <span class="puce orange">{{ r.erreurs.length }} en erreur</span> }
+          <span class="puce" [class.gris]="r.simulation">{{ r.simulation ? 'Simulation : rien n\'est enregistré' : r.notesCreees + ' note(s) créée(s) · ' + (r.statutDesNotes === 'SOUMISE' ? 'soumises' : 'en brouillon') }}</span>
+        </div>
+        @if (r.erreurs.length) {
+          <ul class="liste-erreurs">@for (er of r.erreurs; track $index) { <li>Ligne {{ er.ligne }} : {{ er.message }}</li> }</ul>
+        }
+      }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Fermer</button>
+        <button class="btn indigo" type="button" [disabled]="enCours() || !fichier" (click)="importer()">{{ enCours() ? 'Traitement…' : simulation ? 'Vérifier le fichier' : 'Importer les notes' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('soumettre') {
+    <app-modal titre="Soumettre les notes" [largeur]="520" (fermer)="fermer()">
+      <p class="texte"><strong>{{ compteurs().brouillons }} note{{ compteurs().brouillons > 1 ? 's' : '' }} en brouillon</strong> passer{{ compteurs().brouillons > 1 ? 'ont' : 'a' }} à l'état soumis et les étudiants concernés seront notifiés.</p>
+      @if (compteurs().attendues - compteurs().brouillons - compteurs().soumises > 0) {
+        <p class="texte alerte">{{ compteurs().attendues - compteurs().brouillons - compteurs().soumises }} étudiant(s) n'ont pas encore de note pour cette évaluation.</p>
+      }
+      @if (!admin()) { <p class="texte">Après la soumission, vous ne pourrez plus modifier ces notes : seule l'administration pédagogique pourra les corriger.</p> }
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="soumettre()">{{ enCours() ? 'Soumission…' : 'Soumettre les notes' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('motif') {
+    <app-modal titre="Motif de la correction" [largeur]="520" (fermer)="fermer()">
+      <p class="texte">Vous modifiez des notes déjà soumises. Le motif est obligatoire : il est journalisé et les résultats du semestre devront être recalculés.</p>
+      <div class="champ-f">
+        <label for="motif">Motif</label>
+        <input id="motif" type="text" maxlength="250" autocomplete="off" placeholder="ex. Erreur de report après double correction" (input)="motif = $any($event.target).value" (keydown.enter)="confirmerMotif()">
+      </div>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" (click)="confirmerMotif()">Enregistrer les corrections</button>
+      </div>
+    </app-modal>
+  }
+  @case ('cloturer') {
+    <app-modal titre="Clôturer l'enseignement" [largeur]="540" (fermer)="fermer()">
+      <p class="texte">La clôture de <strong>{{ matiere()?.nom }} · {{ classe()?.nom }}</strong> verrouille la saisie de toutes ses évaluations. Elle est nécessaire au calcul des résultats du semestre.</p>
+      <p class="texte">Toutes les notes doivent avoir été soumises.@if (!admin()) { Seule l'administration pédagogique pourra ensuite rouvrir la saisie. }</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="cloturer()">{{ enCours() ? 'Clôture…' : 'Clôturer' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('rouvrir') {
+    <app-modal titre="Rouvrir la saisie" [largeur]="520" (fermer)="fermer()">
+      <p class="texte">La saisie de <strong>{{ matiere()?.nom }} · {{ classe()?.nom }}</strong> redeviendra possible. Les résultats déjà calculés pour le semestre passeront à l'état « à recalculer ».</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="rouvrir()">{{ enCours() ? 'Réouverture…' : 'Rouvrir' }}</button>
+      </div>
+    </app-modal>
+  }
+}

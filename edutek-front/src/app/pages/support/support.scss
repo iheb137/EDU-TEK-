@@ -1,0 +1,40 @@
+// Styles communs aux écrans du module Support (en complément de shared/ui.scss).
+.puce.rouge { background: #fce8e6; color: #b3261e; }
+
+// Onglets de statut avec compteur
+.onglets { display: inline-flex; flex-wrap: wrap; gap: 4px; padding: 4px; border-radius: 12px; background: #e8edf7; }
+.onglet { all: unset; box-sizing: border-box; height: 34px; padding: 0 14px; border-radius: 9px; display: inline-flex; align-items: center; gap: 8px;
+  font-size: 13.5px; font-weight: 600; color: var(--muted); cursor: pointer; transition: background .2s, color .2s;
+  &:hover { color: var(--ink); } &:focus-visible { outline: 2px solid var(--indigo); }
+  &.actif { background: #fff; color: var(--ink); box-shadow: 0 1px 3px rgb(13 27 61 / 12%); }
+  .compte { min-width: 22px; height: 20px; padding: 0 6px; border-radius: 10px; background: #d9e0f0; color: var(--muted); font-size: 11.5px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+  &.actif .compte { background: var(--indigo); color: #fff; }
+}
+
+// Fiche de détail dans une boîte de dialogue
+.fiche { margin: 0; display: grid; grid-template-columns: 170px 1fr; gap: 0; font-size: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.fiche dt, .fiche dd { margin: 0; padding: 11px 14px; border-top: 1px solid #eef1f8; }
+.fiche dt { font-size: 12.5px; font-weight: 700; color: var(--muted); background: #f7f9fd; }
+.fiche dt:first-of-type, .fiche dt:first-of-type + dd { border-top: 0; }
+.fiche dd { line-height: 1.5; word-break: break-word; }
+.citation { white-space: pre-line; }
+.rejet { color: #b3261e; }
+@media (max-width: 560px) { .fiche { grid-template-columns: 1fr; } .fiche dd { border-top: 0; padding-top: 0; } }
+
+.lien { display: inline-flex; align-items: center; gap: 6px; color: var(--indigo); font-weight: 700; &:hover { text-decoration: underline; } }
+
+// Zone de saisie multiligne dans les formulaires
+.champ-f textarea { min-height: 96px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font: 500 14px/1.5 var(--font); color: var(--ink); resize: vertical; width: 100%; }
+.champ-f .aide { font-size: 12.5px; color: var(--faint); }
+.texte-boite { margin: 0 0 16px; font-size: 14px; line-height: 1.55; color: var(--muted); }
+
+// Boutons d'action d'une ligne : variantes « valider » et « rejeter »
+.icone.ok:hover:not(:disabled) { background: #ddf5ec; color: #0f6b4f; }
+.icone.danger:hover:not(:disabled) { background: #fce8e6; color: #b3261e; }
+.btn.vert { background: #1f9d78; }
+.btn.rouge { background: #c2372c; }
+
+.etudiant .gris { font-size: 12.5px; }
+.compteur { font-size: 13px; color: var(--muted); }
+.td-court { white-space: nowrap; }
+.sujet { max-width: 340px; }

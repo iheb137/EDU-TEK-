@@ -1,0 +1,93 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Parcours</p>
+    <h1>Mes stages</h1>
+    <p class="intro">Proposez votre stage (entreprise, sujet, période) pour validation par l'établissement. Une proposition peut être modifiée ou retirée tant qu'elle n'a pas été traitée.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn indigo" type="button" (click)="ouvrir(null)"><app-icon nom="add" [taille]="18" />Proposer un stage</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="carte tableau rise" style="animation-delay: .1s; margin-top: 22px">
+  @if (chargement()) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Entreprise</th><th>Sujet</th><th>Période</th><th>Statut</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (s of liste(); track s.id) {
+            <tr>
+              <td><span class="nom">{{ s.entreprise }}</span></td>
+              <td style="max-width:360px">{{ s.sujet }}</td>
+              <td style="white-space:nowrap">{{ date(s.dateDebut) }} – {{ date(s.dateFin) }}<br><span class="gris">{{ duree(s) }}</span></td>
+              <td>
+                <span class="puce" [class.orange]="s.statut === 'PROPOSE'" [class.vert]="s.statut === 'VALIDE'" [class.rouge]="s.statut === 'REJETE'">{{ statut(s.statut) }}</span>
+                @if (s.statut === 'REJETE' && s.motifRejet) { <span class="motif-rejet">Motif : {{ s.motifRejet }}</span> }
+              </td>
+              <td>
+                @if (s.statut === 'PROPOSE') {
+                  <div class="actions">
+                    <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier le stage chez ' + s.entreprise" (click)="ouvrir(s)"><app-icon nom="create" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Retirer" [attr.aria-label]="'Retirer le stage chez ' + s.entreprise" (click)="demanderRetrait(s)"><app-icon nom="trash" [taille]="19" /></button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide-bloc"><strong>Aucun stage proposé.</strong>Dès que vous avez trouvé un stage, proposez-le ici : l'établissement le validera ou vous indiquera les corrections à apporter.</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('formulaire') {
+    <app-modal [titre]="cible() ? 'Modifier la proposition de stage' : 'Proposer un stage'" [largeur]="600" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="s-ent">Entreprise d'accueil</label>
+          <input id="s-ent" formControlName="entreprise" maxlength="255" autocomplete="organization">
+          @if (champInvalide('entreprise')) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="s-sujet">Sujet du stage</label>
+          <textarea id="s-sujet" formControlName="sujet" maxlength="255" placeholder="Intitulé ou description courte de la mission"></textarea>
+          @if (champInvalide('sujet')) { <span class="erreur-champ">Obligatoire (255 caractères au maximum).</span> }
+        </div>
+        <div class="champ-f">
+          <label for="s-debut">Date de début</label>
+          <input id="s-debut" type="date" formControlName="dateDebut">
+          @if (champInvalide('dateDebut')) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="s-fin">Date de fin</label>
+          <input id="s-fin" type="date" formControlName="dateFin">
+          @if (champInvalide('dateFin')) { <span class="erreur-champ">Obligatoire.</span> }
+          @else if (erreurPeriode()) { <span class="erreur-champ">La date de fin doit être après la date de début.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : cible() ? 'Enregistrer' : 'Envoyer la proposition' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('retirer') {
+    <app-modal titre="Retirer la proposition" [largeur]="480" (fermer)="fermer()">
+      <p class="texte-fenetre">La proposition de stage chez <strong>{{ cible()?.entreprise }}</strong> sera supprimée. Cette action est définitive.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn danger" type="button" [disabled]="enCours()" (click)="retirer()">{{ enCours() ? 'Retrait…' : 'Retirer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

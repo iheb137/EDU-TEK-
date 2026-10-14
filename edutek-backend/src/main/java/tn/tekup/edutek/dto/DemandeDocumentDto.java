@@ -1,5 +1,6 @@
 package tn.tekup.edutek.dto;
 
+import tn.tekup.edutek.entity.AdminSupport;
 import tn.tekup.edutek.entity.DemandeDocument;
 import tn.tekup.edutek.entity.Etudiant;
 
@@ -15,13 +16,21 @@ public record DemandeDocumentDto(
         String etudiantNom,
         String etudiantMatricule,
         Long traiteParId,
-        boolean documentDisponible
+        String traiteParNom,
+        String messageRetrait,
+        LocalDateTime datePret,
+        LocalDateTime dateRemise,
+        String remisParNom
 ) {
     public static DemandeDocumentDto from(DemandeDocument d) {
         Etudiant e = d.getEtudiant();
         return new DemandeDocumentDto(d.getId(), d.getTypeDocument(), d.getDateDemande(), d.getStatut(),
                 d.getMotifRejet(), e.getId(), e.getPrenom() + " " + e.getNom(), e.getMatricule(),
                 d.getTraitePar() != null ? d.getTraitePar().getId() : null,
-                d.getDocumentGenere() != null);
+                nom(d.getTraitePar()), d.getMessageRetrait(), d.getDatePret(), d.getDateRemise(), nom(d.getRemisPar()));
+    }
+
+    private static String nom(AdminSupport a) {
+        return a == null ? null : a.getPrenom() + " " + a.getNom();
     }
 }

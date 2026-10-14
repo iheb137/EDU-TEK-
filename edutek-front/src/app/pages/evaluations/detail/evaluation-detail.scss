@@ -1,0 +1,53 @@
+h1 { font-size: 28px; }
+.entete-fiche { margin-top: 14px; }
+
+.etat { margin-top: 18px; padding: 16px 22px; display: flex; flex-wrap: wrap; align-items: center; gap: 14px 36px; }
+.etat-bloc { display: flex; flex-direction: column; gap: 6px; min-width: 220px; }
+.etat-titre { font-size: 11.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.etat .avancement { margin: 0; }
+.jauge.large { max-width: 200px; min-width: 160px; height: 8px; }
+.etat-ligne { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--muted);
+  &.ouvert app-icon { color: #1f9d78; } strong { color: var(--ink); } }
+.etat-actions { margin-left: auto; display: flex; gap: 10px; }
+
+.colonnes { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 18px; align-items: start; }
+@media (max-width: 1100px) { .colonnes { grid-template-columns: 1fr; } }
+
+.grille { overflow: hidden; }
+.grille-tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; padding: 20px 24px 12px; }
+.aide, .lecture-seule { margin: 6px 0 0; font-size: 13px; color: var(--muted); line-height: 1.55; max-width: 560px; }
+.lecture-seule { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: 10px; background: #fff1d6; color: #6b4600; app-icon { margin-top: 1px; } }
+kbd { display: inline-block; padding: 0 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; background: #f7f9fe; font: 600 11.5px var(--font); color: var(--ink); }
+.recherche.petite { flex: 0 1 220px; }
+.recherche.petite input { height: 36px; font-size: 13.5px; }
+
+table.saisie { min-width: 640px; }
+table.saisie td { padding-top: 7px; padding-bottom: 7px; }
+.n { width: 44px; } td.n { font-variant-numeric: tabular-nums; font-size: 13px; }
+.col-note { width: 120px; }
+.cellule { width: 86px; height: 34px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--ink);
+  font: 700 15px var(--font); font-variant-numeric: tabular-nums; text-align: right; transition: border-color .15s, box-shadow .15s;
+  &:focus { outline: none; border-color: var(--indigo); box-shadow: 0 0 0 3px rgb(61 91 214 / 18%); }
+  &[aria-invalid='true'] { border-color: #b3261e; background: #fff6f5; } }
+.cellule.com { width: 100%; min-width: 140px; text-align: left; font-weight: 500; font-size: 13.5px; }
+.valeur-fixe { display: inline-block; width: 86px; text-align: right; padding-right: 11px; font-weight: 700; font-size: 15px; font-variant-numeric: tabular-nums; }
+.col-note .erreur-champ { display: block; margin-top: 2px; font-size: 11.5px; }
+tr.modifiee { background: #f3f6ff; } tr.modifiee:hover { background: #eaf0ff; }
+tr.en-erreur .cellule:not(.com):not(:focus) { border-color: #e3a29b; }
+.erreur-ligne { display: inline-flex; vertical-align: middle; margin-left: 6px; color: #b3261e; cursor: help; }
+
+.barre-enregistrement { position: sticky; bottom: 0; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 24px; border-top: 1px solid #eef1f8; background: #fff; font-size: 13.5px; color: var(--muted);
+  &.active { background: #f3f6ff; color: var(--ink); } .rouge { color: #b3261e; font-weight: 700; } }
+
+.stats { padding: 20px 22px 22px; position: sticky; top: 16px; }
+.stats-tete { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stats-intro { margin: 6px 0 14px; }
+.bascule { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--muted); cursor: pointer;
+  input { width: 16px; height: 16px; accent-color: var(--indigo); } }
+.vide.compacte { padding: 12px 0 0; font-size: 13.5px; }
+
+.liste-bandeau { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
+.explication { font-size: 14px; line-height: 1.55; color: var(--ink);
+  p { margin: 0 0 8px; } ul { margin: 0 0 10px; padding-left: 18px; color: var(--muted); } li { margin-bottom: 2px; } }
+.champ-f input { height: 42px; }

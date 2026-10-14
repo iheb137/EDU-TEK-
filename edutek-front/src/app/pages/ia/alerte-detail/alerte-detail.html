@@ -1,0 +1,219 @@
+<a class="retour rise" routerLink="/alertes"><app-icon nom="arrow-back" [taille]="16" />Toutes les alertes</a>
+
+@if (chargement()) {
+  <p class="vide carte">Chargement…</p>
+} @else if (erreur() && !alerte()) {
+  <div class="carte vide" role="alert"><strong>Impossible d'afficher cette alerte.</strong> {{ erreur() }}</div>
+} @else if (alerte(); as a) {
+  <div class="entete rise">
+    <div>
+      <p class="surtitre">Alerte n° {{ a.id }} · {{ nomSemestre() }}</p>
+      <h1>{{ a.etudiantNom }}</h1>
+      <p class="intro">Matricule {{ a.etudiantMatricule }} · signalement du {{ date(a.dateDetection) }}. Ce signalement invite à examiner la situation avec l'étudiant ; il ne constitue ni un jugement ni une décision.</p>
+    </div>
+    @if (peutGerer && transitions().length) {
+      <div class="boutons">
+        @for (t of transitions(); track t) {
+          <button type="button" class="btn" [class.indigo]="t === 'EN_COURS' || t === 'TRAITEE'" [class.clair]="t === 'CLASSEE'" (click)="demanderStatut(t)">
+            <app-icon [nom]="actionStatut[t].icone" [taille]="17" />{{ actionStatut[t].bouton }}
+          </button>
+        }
+      </div>
+    }
+  </div>
+
+  @if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+
+  <div class="grille haut">
+    <!-- Synthèse -->
+    <section class="carte bloc rise" style="animation-delay: .06s" aria-labelledby="t-synthese">
+      <div class="ligne"><h2 id="t-synthese">Synthèse</h2><span [class]="'statut ' + a.statut">{{ libelleStatut(a.statut) }}</span></div>
+      <div class="score-principal">
+        <div>
+          <span class="etiquette">Score de risque</span>
+          <strong class="chiffres">{{ pourcent(a.score) }}</strong>
+        </div>
+        <span [class]="'niveau grand ' + a.niveau">Niveau {{ libelleNiveau(a.niveau) }}</span>
+      </div>
+      @if (parametres(); as p) {
+        <app-echelle [seuilMoyen]="p.seuilMoyen" [seuilEleve]="p.seuilEleve" [score]="a.score" />
+        <p class="note">Seuils de niveau actuellement en vigueur. Le niveau affiché est celui calculé lors de l'analyse.</p>
+      }
+      <dl class="infos">
+        <div><dt>Détectée le</dt><dd>{{ dateHeure(a.dateDetection) }}</dd></div>
+        <div><dt>Actions d'accompagnement</dt><dd>{{ a.nbActions }}{{ actionsOuvertes() ? ' dont ' + actionsOuvertes() + ' en cours ou planifiée' + (actionsOuvertes() > 1 ? 's' : '') : '' }}</dd></div>
+        @if (prediction(); as p) {
+          <div><dt>Calculé le</dt><dd>{{ dateHeure(p.datePrediction) }}</dd></div>
+          <div><dt>Modèle</dt><dd>{{ p.modeleNom }} (version {{ p.modeleVersion }})</dd></div>
+        }
+      </dl>
+      @if (close()) {
+        <p class="note-close"><app-icon nom="lock-closed" [taille]="16" />Alerte close : le plan d'accompagnement est conservé mais n'accepte plus de nouvelle action.</p>
+      }
+    </section>
+
+    <!-- Explication de la prédiction -->
+    <section class="carte bloc rise" style="animation-delay: .12s" aria-labelledby="t-facteurs">
+      <div class="ligne">
+        <h2 id="t-facteurs">Ce qui a pesé dans le score</h2>
+        <a class="lien" [routerLink]="['/predictions']" [queryParams]="{ etudiant: a.etudiantId, semestre: 'tous' }">Historique des prédictions <app-icon nom="arrow-forward" [taille]="15" /></a>
+      </div>
+      @if (prediction(); as p) {
+        <app-facteurs class="facteurs" [facteurs]="p.facteurs" />
+      } @else if (erreurPrediction()) {
+        <p class="bandeau" role="alert">Prédiction indisponible : {{ erreurPrediction() }}</p>
+      } @else {
+        <p class="note">Chargement…</p>
+      }
+      <p class="principe"><app-icon nom="information-circle" [taille]="18" /><span>Ces indicateurs expliquent le calcul ; ils ne décrivent pas l'étudiant et ne disent rien des raisons de sa situation. Un échange avec lui reste indispensable avant toute décision.</span></p>
+    </section>
+  </div>
+
+  <div class="grille bas">
+    <!-- Plan d'accompagnement -->
+    <section class="carte bloc rise" style="animation-delay: .18s" aria-labelledby="t-plan">
+      <div class="ligne">
+        <div><h2 id="t-plan">Plan d'accompagnement</h2><p class="note sous-titre">Actions décidées par l'équipe pour accompagner l'étudiant.</p></div>
+        @if (peutGerer && !close()) {
+          <button type="button" class="btn indigo" (click)="ouvrirCreationAction()"><app-icon nom="add" [taille]="18" />Ajouter une action</button>
+        }
+      </div>
+      @if (erreurActions()) { <p class="bandeau" role="alert">{{ erreurActions() }}</p> }
+      @if (actions() === null) {
+        <p class="note">Chargement…</p>
+      } @else if (actions()!.length) {
+        <ul class="plan">
+          @for (ac of actions(); track ac.id) {
+            <li class="action">
+              <span class="type-icone" aria-hidden="true"><app-icon [nom]="iconeType(ac.type)" [taille]="19" /></span>
+              <div class="contenu">
+                <div class="ligne"><strong>{{ libelleType(ac.type) }}</strong><span [class]="'statut ' + ac.statut">{{ libelleStatutAction(ac.statut) }}</span></div>
+                <p class="description">{{ ac.description }}</p>
+                <span class="note">Créée le {{ dateHeure(ac.dateCreation) }}</span>
+              </div>
+              @if (peutGerer && transitionsAction(ac).length) {
+                <button class="icone" type="button" title="Changer le statut de l'action" [attr.aria-label]="'Changer le statut de l\'action ' + libelleType(ac.type)" (click)="ouvrirStatutAction(ac)"><app-icon nom="swap-horizontal" [taille]="19" /></button>
+              }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="vide-bloc">Aucune action pour le moment.@if (peutGerer && !close()) { Ajoutez un premier entretien ou une mesure de soutien pour engager le suivi : l'alerte passera alors au statut « En cours ».}</p>
+      }
+    </section>
+
+    <!-- Avis de l'équipe -->
+    <section class="carte bloc rise" style="animation-delay: .24s" aria-labelledby="t-avis">
+      <div class="ligne">
+        <div><h2 id="t-avis">Avis de l'équipe</h2><p class="note sous-titre">Le signalement était-il justifié ? Ces avis servent à évaluer la qualité du modèle.</p></div>
+        @if (bilanAvis().total) { <span class="puce">{{ bilanAvis().pertinents }} / {{ bilanAvis().total }} jugé{{ bilanAvis().pertinents > 1 ? 's' : '' }} pertinent{{ bilanAvis().pertinents > 1 ? 's' : '' }}</span> }
+      </div>
+
+      @if (peutGerer) {
+        <form class="form-avis" [formGroup]="formAvis" (ngSubmit)="envoyerAvis()" novalidate>
+          <fieldset>
+            <legend>Ce signalement vous paraît-il pertinent ?</legend>
+            <div class="choix-avis">
+              <button type="button" class="choix" [class.oui]="choixAvis() === true" [attr.aria-pressed]="choixAvis() === true" (click)="choisirAvis(true)"><app-icon nom="checkmark" [taille]="17" />Oui, pertinent</button>
+              <button type="button" class="choix" [class.non]="choixAvis() === false" [attr.aria-pressed]="choixAvis() === false" (click)="choisirAvis(false)"><app-icon nom="close" [taille]="17" />Non, pas pertinent</button>
+            </div>
+          </fieldset>
+          <div class="champ-f">
+            <label for="avis-com">Commentaire (facultatif)</label>
+            <textarea id="avis-com" formControlName="commentaire" rows="3" maxlength="500" placeholder="Par exemple : situation déjà connue et suivie, ou élément que le score ne pouvait pas prendre en compte."></textarea>
+            <span class="aide">{{ formAvis.controls.commentaire.value.length }} / 500 caractères</span>
+          </div>
+          @if (erreurFormAvis()) { <p class="bandeau" role="alert">{{ erreurFormAvis() }}</p> }
+          <div class="pied"><button type="submit" class="btn indigo" [disabled]="envoiAvis()">{{ envoiAvis() ? 'Enregistrement…' : 'Enregistrer l\'avis' }}</button></div>
+        </form>
+      }
+
+      @if (erreurAvis()) { <p class="bandeau" role="alert">{{ erreurAvis() }}</p> }
+      @if (avis() === null) {
+        <p class="note">Chargement…</p>
+      } @else if (avis()!.length) {
+        <ul class="avis">
+          @for (f of avis(); track f.id) {
+            <li>
+              <div class="ligne"><span class="puce" [class.vert]="f.pertinent" [class.gris]="!f.pertinent">{{ f.pertinent ? 'Pertinent' : 'Pas pertinent' }}</span><span class="note">{{ dateHeure(f.dateAvis) }}</span></div>
+              @if (f.commentaire) { <p>{{ f.commentaire }}</p> }
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="vide-bloc">Aucun avis n'a encore été donné sur ce signalement.</p>
+      }
+    </section>
+  </div>
+}
+
+@switch (fenetre()) {
+  @case ('statut') {
+    @if (statutCible(); as s) {
+      <app-modal [titre]="actionStatut[s].bouton" [largeur]="500" (fermer)="fermer()">
+        <p class="texte-modal">{{ actionStatut[s].explication }}</p>
+        <p class="texte-modal gris">Nouveau statut : <span [class]="'statut ' + s">{{ libelleStatut(s) }}</span></p>
+        @if (s !== 'EN_COURS' && actionsOuvertes()) {
+          <p class="bandeau attention">{{ actionsOuvertes() }} action{{ actionsOuvertes() > 1 ? 's sont' : ' est' }} encore planifiée{{ actionsOuvertes() > 1 ? 's' : '' }} ou en cours. Pensez à mettre à jour leur statut.</p>
+        }
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn indigo" type="button" [disabled]="enCours()" (click)="confirmerStatut()">{{ enCours() ? 'Enregistrement…' : 'Confirmer' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('action') {
+    <app-modal titre="Ajouter une action d'accompagnement" [largeur]="580" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formAction" (ngSubmit)="creerAction()" novalidate>
+        <div class="champ-f large">
+          <label for="ac-type">Type d'action</label>
+          <select id="ac-type" formControlName="type">
+            @for (t of typesAction; track t) { <option [value]="t">{{ libelleType(t) }}</option> }
+          </select>
+        </div>
+        <div class="champ-f large">
+          <label for="ac-desc">Description</label>
+          <textarea id="ac-desc" formControlName="description" rows="4" maxlength="1000" placeholder="Objectif, personne référente, échéance prévue…"></textarea>
+          @if (formAction.controls.description.touched && formAction.controls.description.invalid) { <span class="erreur-champ">Décrivez l'action (1 000 caractères au maximum).</span> }
+          <span class="aide">Rédigez une description factuelle, centrée sur l'aide apportée. Elle est visible par l'équipe pédagogique.</span>
+        </div>
+      </form>
+      @if (alerte()?.statut === 'OUVERTE') { <p class="note" style="margin:14px 0 0">L'alerte passera automatiquement au statut « En cours ».</p> }
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="creerAction()">{{ enCours() ? 'Enregistrement…' : 'Ajouter l\'action' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('statut-action') {
+    @if (actionCible(); as ac) {
+      <app-modal titre="Mettre à jour l'action" [largeur]="560" (fermer)="fermer()">
+        <p class="texte-modal gris">{{ libelleType(ac.type) }} · actuellement <span [class]="'statut ' + ac.statut">{{ libelleStatutAction(ac.statut) }}</span></p>
+        <form [formGroup]="formStatutAction" (ngSubmit)="enregistrerStatutAction()" novalidate>
+          <fieldset class="options-statut">
+            <legend>Nouveau statut</legend>
+            @for (s of transitionsAction(ac); track s) {
+              <label class="option"><input type="radio" formControlName="statut" [value]="s"><span [class]="'statut ' + s">{{ libelleStatutAction(s) }}</span></label>
+            }
+          </fieldset>
+          <div class="champ-f">
+            <label for="ac-maj">Description</label>
+            <textarea id="ac-maj" formControlName="description" rows="4" maxlength="1000"></textarea>
+            <span class="aide">Vous pouvez la compléter (compte rendu, suite donnée). Le texte saisi remplace la description actuelle.</span>
+          </div>
+        </form>
+        <p class="note" style="margin:12px 0 0">Une action terminée ou annulée ne peut plus changer de statut.</p>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn indigo" type="button" [disabled]="enCours() || !formStatutAction.controls.statut.value" (click)="enregistrerStatutAction()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+}

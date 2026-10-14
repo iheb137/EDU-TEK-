@@ -1,0 +1,159 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Scolarité</p>
+    <h1>Demandes de documents</h1>
+    <p class="intro">
+      @if (peutTraiter) { Prenez en charge les demandes, préparez le document papier, signalez-le prêt à retirer, puis enregistrez sa remise quand l'étudiant passe au bureau. L'étudiant est notifié à chaque étape. }
+      @else { Suivi des demandes d'attestations et de relevés déposées par les étudiants et de leur traitement par le service support. }
+    </p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" [disabled]="chargement()" (click)="charger()"><app-icon nom="refresh" [taille]="18" />Actualiser</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <div class="onglets" role="tablist" aria-label="Filtrer par statut">
+    @for (o of onglets; track o.valeur) {
+      <button class="onglet" type="button" role="tab" [class.actif]="statut() === o.valeur" [attr.aria-selected]="statut() === o.valeur" (click)="statut.set(o.valeur)">
+        {{ o.libelle }}<span class="compte">{{ comptes()[o.valeur] ?? 0 }}</span>
+      </button>
+    }
+  </div>
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Étudiant ou matricule" aria-label="Rechercher un étudiant" [value]="recherche()" (input)="recherche.set($any($event.target).value)">
+  </div>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !liste()) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste()) {
+    @if (affiches().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Étudiant</th><th>Document demandé</th><th>Demandé le</th><th>Statut</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (d of affiches(); track d.id) {
+              <tr>
+                <td class="etudiant"><span class="nom">{{ d.etudiantNom }}</span><br><span class="gris">{{ d.etudiantMatricule }}</span></td>
+                <td>{{ libelleType(d.typeDocument) }}<br><span class="note">Demande n° {{ d.id }}</span></td>
+                <td class="gris td-court">{{ quand(d.dateDemande) }}</td>
+                <td>
+                  <span [class]="'puce ' + puce(d.statut)">{{ libelleStatut(d.statut) }}</span>
+                  @if (d.motifRejet) { <div class="note rejet-ligne">{{ d.motifRejet }}</div> }
+                  @if (d.statut === 'EN_TRAITEMENT' && d.traiteParNom) { <div class="note">Par {{ d.traiteParNom }}</div> }
+                  @if (d.statut === 'PRET' && d.datePret) { <div class="note">Prêt depuis le {{ quand(d.datePret) }}</div> }
+                  @if (d.statut === 'REMIS' && d.dateRemise) { <div class="note">Remis le {{ quand(d.dateRemise) }}@if (d.remisParNom) { par {{ d.remisParNom }}}</div> }
+                </td>
+                <td>
+                  <div class="actions">
+                    @if (peutTraiter && d.statut === 'SOUMIS') {
+                      <button class="icone" type="button" title="Prendre en charge" [attr.aria-label]="'Prendre en charge la demande de ' + d.etudiantNom" (click)="demander('prendre', d)"><app-icon nom="hand-left" [taille]="19" /></button>
+                    }
+                    @if (peutTraiter && d.statut === 'EN_TRAITEMENT') {
+                      <button class="icone ok" type="button" title="Document prêt à retirer" [attr.aria-label]="'Document de ' + d.etudiantNom + ' prêt à retirer'" (click)="demander('pret', d)"><app-icon nom="checkmark-done" [taille]="19" /></button>
+                    }
+                    @if (peutTraiter && d.statut === 'PRET') {
+                      <button class="btn vert petit" type="button" [attr.aria-label]="'Enregistrer la remise du document à ' + d.etudiantNom" (click)="demander('remettre', d)"><app-icon nom="hand-left" [taille]="17" />Remis à l'étudiant</button>
+                    }
+                    @if (peutTraiter && (d.statut === 'SOUMIS' || d.statut === 'EN_TRAITEMENT')) {
+                      <button class="icone danger" type="button" title="Rejeter" [attr.aria-label]="'Rejeter la demande de ' + d.etudiantNom" (click)="demander('rejeter', d)"><app-icon nom="close-circle" [taille]="19" /></button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination"><span>{{ affiches().length }} demande{{ affiches().length > 1 ? 's' : '' }}</span></div>
+    } @else {
+      <p class="vide">
+        @if (recherche().trim()) { Aucune demande ne correspond à cette recherche. }
+        @else {
+          @switch (statut()) {
+            @case ('SOUMIS') { Aucune nouvelle demande : tout a été pris en charge. }
+            @case ('EN_TRAITEMENT') { Aucune demande en cours de traitement. }
+            @case ('PRET') { Aucun document en attente de retrait au bureau. }
+            @case ('REMIS') { Aucun document remis pour le moment. }
+            @case ('REJETE') { Aucune demande rejetée. }
+            @default { Aucune demande de document n'a encore été déposée. }
+          }
+        }
+      </p>
+    }
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('prendre') {
+    @if (cible(); as d) {
+      <app-modal titre="Prendre en charge la demande" [largeur]="520" (fermer)="fermer()">
+        <p class="texte-boite"><strong>{{ libelleType(d.typeDocument) }}</strong> demandé par <strong>{{ d.etudiantNom }}</strong> le {{ quand(d.dateDemande) }}. La demande vous sera attribuée : vous seul pourrez ensuite la signaler prête à retirer ou la rejeter.</p>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn indigo" type="button" [disabled]="enCours()" (click)="prendreEnCharge()">{{ enCours() ? 'Enregistrement…' : 'Prendre en charge' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('pret') {
+    @if (cible(); as d) {
+      <app-modal titre="Document prêt à retirer" [largeur]="580" (fermer)="fermer()">
+        <p class="texte-boite"><strong>{{ libelleType(d.typeDocument) }}</strong> pour <strong>{{ d.etudiantNom }}</strong>@if (d.etudiantMatricule) { ({{ d.etudiantMatricule }}) }. Confirmez une fois le document imprimé et signé : l'étudiant sera invité à passer le retirer au bureau, muni de sa carte d'étudiant.</p>
+        <div class="champ-f">
+          <label for="d-consigne">Consigne de retrait (facultatif)</label>
+          <textarea id="d-consigne" [formControl]="messageRetrait" maxlength="500" rows="3"></textarea>
+          @if (messageRetrait.touched && messageRetrait.invalid) { <span class="erreur-champ">500 caractères maximum.</span> }
+          @else { <span class="aide">Bureau, horaires, pièces à présenter… Ce texte est ajouté à la notification de l'étudiant.</span> }
+        </div>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn vert" type="button" [disabled]="enCours()" (click)="marquerPret()">{{ enCours() ? 'Envoi…' : 'Prévenir l\'étudiant' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('remettre') {
+    @if (cible(); as d) {
+      <app-modal titre="Remise du document" [largeur]="540" (fermer)="fermer()">
+        <p class="texte-boite">Vous remettez <strong>{{ libelleType(d.typeDocument) }}</strong> à <strong>{{ d.etudiantNom }}</strong>@if (d.etudiantMatricule) { (matricule <strong>{{ d.etudiantMatricule }}</strong>) }.</p>
+        <p class="texte-boite">Vérifiez la carte d'étudiant avant de remettre le document. La remise est enregistrée à votre nom, avec la date et l'heure ; elle ne peut pas être annulée.</p>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn vert" type="button" [disabled]="enCours()" (click)="remettre()">{{ enCours() ? 'Enregistrement…' : 'Confirmer la remise' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('rejeter') {
+    @if (cible(); as d) {
+      <app-modal titre="Rejeter la demande" [largeur]="560" (fermer)="fermer()">
+        <p class="texte-boite"><strong>{{ libelleType(d.typeDocument) }}</strong> demandé par <strong>{{ d.etudiantNom }}</strong> le {{ quand(d.dateDemande) }}.</p>
+        <div class="champ-f">
+          <label for="d-motif">Motif du rejet</label>
+          <textarea id="d-motif" [formControl]="motifRejet" maxlength="500" placeholder="Ex. : frais d'inscription non réglés, demande en double…"></textarea>
+          @if (motifRejet.touched && motifRejet.invalid) { <span class="erreur-champ">Indiquez un motif d'au moins 5 caractères.</span> }
+          @else { <span class="aide">Le motif est communiqué à l'étudiant.</span> }
+        </div>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn rouge" type="button" [disabled]="enCours()" (click)="rejeter()">{{ enCours() ? 'Envoi…' : 'Rejeter la demande' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+}

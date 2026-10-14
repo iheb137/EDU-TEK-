@@ -1,0 +1,71 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Mon compte</p>
+    <h1>Profil</h1>
+    <p class="intro">Les informations de votre compte et la gestion de votre mot de passe.</p>
+  </div>
+</div>
+
+<div class="grille">
+  <section class="carte identite rise" style="animation-delay: .1s" aria-labelledby="titre-identite">
+    <div class="avatar" aria-hidden="true"><app-icon nom="person" [taille]="34" /></div>
+    <h2 id="titre-identite">{{ auth.nomComplet() }}</h2>
+    <div class="puces centre">@for (r of session?.roles ?? []; track r) { <span class="puce">{{ libelleRole(r) }}</span> }</div>
+    <dl>
+      <div><dt><app-icon nom="mail" [taille]="17" />Adresse e-mail</dt><dd>{{ session?.email }}</dd></div>
+      <div><dt><app-icon nom="business" [taille]="17" />Établissement</dt><dd class="etab">{{ session?.etablissement }}</dd></div>
+      @if (session?.prenom) { <div><dt><app-icon nom="person" [taille]="17" />Prénom</dt><dd>{{ session?.prenom }}</dd></div> }
+      @if (session?.nom) { <div><dt><app-icon nom="id-card" [taille]="17" />Nom</dt><dd>{{ session?.nom }}</dd></div> }
+    </dl>
+    <p class="note">Pour corriger votre nom ou votre adresse e-mail, adressez-vous à l'administration de l'établissement.</p>
+  </section>
+
+  <section class="carte mdp rise" style="animation-delay: .18s" aria-labelledby="titre-mdp">
+    <div class="tete">
+      <span class="pictogramme" aria-hidden="true"><app-icon nom="key" [taille]="20" /></span>
+      <div>
+        <h2 id="titre-mdp">Changer le mot de passe</h2>
+        <p class="gris">8 à 64 caractères. Mélangez lettres, chiffres et symboles.</p>
+      </div>
+    </div>
+
+    @if (succes()) {
+      <div class="bandeau ok succes" role="status">
+        <span>Mot de passe modifié. Il sera demandé à votre prochaine connexion.</span>
+        <button class="lien-btn" type="button" (click)="seReconnecter()">Se reconnecter maintenant</button>
+      </div>
+    }
+
+    <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+      <div class="champ-f large">
+        <label for="p-email">Adresse e-mail du compte</label>
+        <input id="p-email" type="email" formControlName="email" autocomplete="username" readonly>
+        @if (champInvalide('email')) { <span class="erreur-champ">Adresse e-mail invalide.</span> }
+      </div>
+      <div class="champ-f large">
+        <label for="p-ancien">Mot de passe actuel</label>
+        <div class="rang">
+          <input id="p-ancien" [type]="visible() ? 'text' : 'password'" formControlName="ancien" autocomplete="current-password">
+          <button class="icone" type="button" [title]="visible() ? 'Masquer les mots de passe' : 'Afficher les mots de passe'" [attr.aria-label]="visible() ? 'Masquer les mots de passe' : 'Afficher les mots de passe'" [attr.aria-pressed]="visible()" (click)="visible.set(!visible())"><app-icon [nom]="visible() ? 'eye-off' : 'eye'" [taille]="19" /></button>
+        </div>
+        @if (champInvalide('ancien')) { <span class="erreur-champ">Saisissez votre mot de passe actuel.</span> }
+      </div>
+      <div class="champ-f">
+        <label for="p-nouveau">Nouveau mot de passe</label>
+        <input id="p-nouveau" [type]="visible() ? 'text' : 'password'" formControlName="nouveau" autocomplete="new-password" maxlength="64">
+        @if (champInvalide('nouveau')) { <span class="erreur-champ">8 caractères minimum (64 au plus).</span> }
+        @else if (formulaire.controls.nouveau.touched && formulaire.hasError('identique')) { <span class="erreur-champ">Le nouveau mot de passe doit être différent de l'actuel.</span> }
+      </div>
+      <div class="champ-f">
+        <label for="p-confirmation">Confirmation</label>
+        <input id="p-confirmation" [type]="visible() ? 'text' : 'password'" formControlName="confirmation" autocomplete="new-password" maxlength="64">
+        @if (champInvalide('confirmation')) { <span class="erreur-champ">Confirmez le nouveau mot de passe.</span> }
+        @else if (formulaire.controls.confirmation.touched && formulaire.hasError('differents')) { <span class="erreur-champ">Les deux saisies ne correspondent pas.</span> }
+      </div>
+    </form>
+    @if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+    <div class="pied">
+      <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Modifier le mot de passe' }}</button>
+    </div>
+  </section>
+</div>

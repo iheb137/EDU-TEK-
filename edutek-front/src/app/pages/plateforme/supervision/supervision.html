@@ -1,0 +1,208 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Plateforme</p>
+    <h1>Supervision technique</h1>
+    <p class="intro">État des automatisations n8n : workflows en service, dernières exécutions et alertes techniques à traiter.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" (click)="actualiser()"><app-icon nom="refresh" [taille]="18" />Actualiser</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="indicateurs" aria-label="Indicateurs">
+  <article class="carte rise" style="animation-delay: .08s">
+    <span class="titre">Workflows actifs</span>
+    <span class="valeur">{{ workflows() ? nbActifs() + ' / ' + workflows()!.length : '…' }}</span>
+  </article>
+  <article class="carte rise" style="animation-delay: .14s">
+    <span class="titre">Échecs parmi les {{ limite }} dernières exécutions</span>
+    <span class="valeur" [class.alerte]="nbEchecs() > 0">{{ executions() ? nbEchecs() : '…' }}</span>
+  </article>
+  <article class="carte rise" style="animation-delay: .2s">
+    <span class="titre">Alertes techniques ouvertes</span>
+    <span class="valeur" [class.alerte]="nbOuvertes() > 0">{{ alertes() ? nbOuvertes() : '…' }}</span>
+  </article>
+</section>
+
+<div class="onglets rise" role="tablist" aria-label="Sections de la supervision" style="animation-delay: .24s">
+  <button type="button" role="tab" [attr.aria-selected]="onglet() === 'workflows'" [class.actif]="onglet() === 'workflows'" (click)="onglet.set('workflows')"><app-icon nom="git-branch" [taille]="17" />Workflows</button>
+  <button type="button" role="tab" [attr.aria-selected]="onglet() === 'executions'" [class.actif]="onglet() === 'executions'" (click)="onglet.set('executions')"><app-icon nom="time" [taille]="17" />Exécutions</button>
+  <button type="button" role="tab" [attr.aria-selected]="onglet() === 'alertes'" [class.actif]="onglet() === 'alertes'" (click)="onglet.set('alertes')"><app-icon nom="alert-circle" [taille]="17" />Alertes techniques @if (nbOuvertes()) { <span class="compteur">{{ nbOuvertes() }}</span> }</button>
+</div>
+
+@switch (onglet()) {
+  @case ('workflows') {
+    <section class="carte tableau" role="tabpanel" aria-label="Workflows">
+      @if (chargeWf() && !workflows()) {
+        <p class="vide">Chargement…</p>
+      } @else if (workflows(); as l) {
+        @if (l.length) {
+          <div class="defile">
+            <table>
+              <thead><tr><th>Workflow</th><th>État</th><th>Dernière exécution</th><th>Exécutions</th><th>Échecs</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+              <tbody>
+                @for (w of l; track w.id) {
+                  <tr>
+                    <td><span class="nom">{{ w.nom }}</span><br><span class="note">Déclaré le {{ dateHeure(w.dateCreation) }}</span></td>
+                    <td><span class="puce" [class.vert]="w.actif" [class.gris]="!w.actif">{{ w.actif ? 'Actif' : 'Désactivé' }}</span></td>
+                    <td>
+                      <span [class]="'puce ' + classeExec(w.dernierStatut)">{{ libelleExec(w.dernierStatut) }}</span>
+                      @if (w.derniereExecution) { <br><span class="note">{{ dateHeure(w.derniereExecution) }}</span> }
+                    </td>
+                    <td>{{ w.nbExecutions }}</td>
+                    <td>{{ w.nbEchecs }} <span class="note">({{ tauxEchec(w) }})</span></td>
+                    <td>
+                      <div class="actions">
+                        <button class="icone" type="button" title="Voir les exécutions" [attr.aria-label]="'Voir les exécutions de ' + w.nom" (click)="voirExecutions(w)"><app-icon nom="list" [taille]="19" /></button>
+                        @if (w.actif) {
+                          <button class="icone danger" type="button" title="Désactiver le workflow" [attr.aria-label]="'Désactiver ' + w.nom" [disabled]="enCours()" (click)="basculerWorkflow(w)"><app-icon nom="power" [taille]="19" /></button>
+                        } @else {
+                          <button class="reactiver" type="button" [attr.aria-label]="'Activer ' + w.nom" [disabled]="enCours()" (click)="basculerWorkflow(w)"><app-icon nom="power" [taille]="16" />Activer</button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="vide">Aucun workflow n'est encore connu. Ils apparaissent automatiquement dès que n8n signale sa première exécution.</p>
+        }
+      }
+    </section>
+  }
+
+  @case ('executions') {
+    <div class="filtres">
+      <select class="champ" aria-label="Filtrer par workflow" (change)="filtrerExecutions('workflow', $any($event.target).value)">
+        <option value="">Tous les workflows</option>
+        @for (w of workflows() ?? []; track w.id) { <option [value]="w.id" [selected]="'' + w.id === filtreWorkflow()">{{ w.nom }}</option> }
+      </select>
+      <select class="champ" aria-label="Filtrer par statut" (change)="filtrerExecutions('statut', $any($event.target).value)">
+        <option value="">Tous les statuts</option>
+        @for (s of statutsExecution; track s) { <option [value]="s" [selected]="s === filtreStatutEx()">{{ libelleExec(s) }}</option> }
+      </select>
+      <span class="note">{{ limite }} exécutions les plus récentes</span>
+    </div>
+    @if (erreurEx()) { <p class="bandeau" role="alert">{{ erreurEx() }}</p> }
+    <section class="carte tableau" role="tabpanel" aria-label="Exécutions">
+      @if (chargeEx() && !executions()) {
+        <p class="vide">Chargement…</p>
+      } @else if (executions(); as l) {
+        @if (l.length) {
+          <div class="defile">
+            <table>
+              <thead><tr><th>Date</th><th>Workflow</th><th>Statut</th><th>Durée</th><th>Résultat ou erreur</th><th><span class="visuel-cache">Détail</span></th></tr></thead>
+              <tbody>
+                @for (e of l; track e.id) {
+                  <tr [class.echec]="e.statut === 'ECHEC'">
+                    <td class="gris nowrap">{{ dateHeure(e.dateExecution) }}</td>
+                    <td><span class="nom">{{ e.workflow }}</span>@if (e.idExterne) { <br><span class="note">n8n : {{ e.idExterne }}</span> }</td>
+                    <td><span [class]="'puce ' + classeExec(e.statut)">{{ libelleExec(e.statut) }}</span></td>
+                    <td class="nowrap">{{ duree(e.dureeMs) }}</td>
+                    <td class="resultat">
+                      @if (e.resultat) {
+                        <span [class.deplie]="detail() === e.id">{{ e.resultat }}</span>
+                      } @else { <span class="note">—</span> }
+                      @if (e.alerteId) { <br><span class="note">Alerte technique n° {{ e.alerteId }}</span> }
+                    </td>
+                    <td>
+                      @if (e.resultat && e.resultat.length > 90) {
+                        <div class="actions"><button class="icone" type="button" [title]="detail() === e.id ? 'Réduire' : 'Afficher tout le message'" [attr.aria-label]="detail() === e.id ? 'Réduire le message' : 'Afficher tout le message'" [attr.aria-expanded]="detail() === e.id" (click)="basculerDetail(e.id)"><app-icon [nom]="detail() === e.id ? 'chevron-down' : 'chevron-forward'" [taille]="19" /></button></div>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="vide">{{ filtreWorkflow() || filtreStatutEx() ? 'Aucune exécution ne correspond à ces filtres.' : 'Aucune exécution enregistrée pour le moment.' }}</p>
+        }
+      }
+    </section>
+  }
+
+  @case ('alertes') {
+    <div class="filtres">
+      <select class="champ" aria-label="Filtrer par statut" (change)="filtrerAlertes('statut', $any($event.target).value)">
+        <option value="">Tous les statuts</option>
+        @for (s of statutsAlerte; track s) { <option [value]="s" [selected]="s === filtreStatutAl()">{{ libelleAlerte(s) }}</option> }
+      </select>
+      <select class="champ" aria-label="Filtrer par niveau" (change)="filtrerAlertes('niveau', $any($event.target).value)">
+        <option value="">Tous les niveaux</option>
+        @for (n of niveaux; track n) { <option [value]="n" [selected]="n === filtreNiveau()">{{ libelleNiveau(n) }}</option> }
+      </select>
+    </div>
+    @if (erreurAl()) { <p class="bandeau" role="alert">{{ erreurAl() }}</p> }
+    <section class="carte tableau" role="tabpanel" aria-label="Alertes techniques">
+      @if (chargeAl() && !alertes()) {
+        <p class="vide">Chargement…</p>
+      } @else if (alertes(); as l) {
+        @if (l.length) {
+          <div class="defile">
+            <table>
+              <thead><tr><th>Date</th><th>Niveau</th><th>Alerte</th><th>Statut</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+              <tbody>
+                @for (a of l; track a.id) {
+                  <tr>
+                    <td class="gris nowrap">{{ dateHeure(a.dateCreation) }}</td>
+                    <td><span [class]="'puce ' + classeNiveau(a.niveau)">{{ libelleNiveau(a.niveau) }}</span></td>
+                    <td class="resultat">
+                      <span class="nom">{{ a.type }}</span>@if (a.source) { <span class="note"> · {{ a.source }}</span> }<br>
+                      <span>{{ a.message }}</span>
+                    </td>
+                    <td>
+                      <span [class]="'puce ' + classeAlerte(a.statut)">{{ libelleAlerte(a.statut) }}</span>
+                      @if (a.dateTraitement) { <br><span class="note">{{ dateHeure(a.dateTraitement) }}</span> }
+                    </td>
+                    <td>
+                      <div class="actions">
+                        @for (t of transitions(a); track t) {
+                          <button class="action-texte" type="button" [attr.aria-label]="libelleTransition(t) + ' l\'alerte n° ' + a.id" (click)="demanderStatut(a, t)">
+                            <app-icon [nom]="t === 'RESOLUE' ? 'checkmark-done' : 'checkmark'" [taille]="16" />{{ libelleTransition(t) }}
+                          </button>
+                        }
+                      </div>
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="vide">{{ filtreStatutAl() || filtreNiveau() ? 'Aucune alerte technique ne correspond à ces filtres.' : 'Aucune alerte technique : tout fonctionne normalement.' }}</p>
+        }
+      }
+    </section>
+  }
+}
+
+@if (confirmation(); as c) {
+  @if (c.genre === 'workflow') {
+    <app-modal titre="Désactiver le workflow" [largeur]="500" (fermer)="confirmation.set(null)">
+      <p class="aide">Désactiver <strong>{{ c.workflow.nom }}</strong> ?</p>
+      <p class="gris aide">n8n consulte cet état avant chaque exécution : les traitements automatiques de ce workflow s'arrêteront jusqu'à sa réactivation.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="confirmation.set(null)">Annuler</button>
+        <button class="btn danger-plein" type="button" [disabled]="enCours()" (click)="valider()">{{ enCours() ? 'Enregistrement…' : 'Désactiver' }}</button>
+      </div>
+    </app-modal>
+  } @else {
+    <app-modal [titre]="libelleTransition(c.statut)" [largeur]="520" (fermer)="confirmation.set(null)">
+      <p class="aide">Passer l'alerte n° {{ c.alerte.id }} au statut <strong>{{ libelleAlerte(c.statut).toLowerCase() }}</strong> ?</p>
+      <p class="gris aide">« {{ c.alerte.message }} »</p>
+      <p class="note aide">{{ c.statut === 'RESOLUE' ? 'Une alerte résolue est close définitivement.' : 'Une alerte acquittée ne peut plus revenir au statut « ouverte ».' }}</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="confirmation.set(null)">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="valider()">{{ enCours() ? 'Enregistrement…' : libelleTransition(c.statut) }}</button>
+      </div>
+    </app-modal>
+  }
+}

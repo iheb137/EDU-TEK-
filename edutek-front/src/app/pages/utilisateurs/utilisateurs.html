@@ -1,0 +1,184 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Administration</p>
+    <h1>Utilisateurs</h1>
+    <p class="intro">Créez les comptes, importez une promotion entière, attribuez les rôles et réinitialisez les mots de passe. Chaque compte créé reçoit un mot de passe temporaire à changer à la première connexion.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" (click)="ouvrirImport()"><app-icon nom="cloud-upload" [taille]="18" />Importer (CSV)</button>
+    <button class="btn indigo" type="button" (click)="ouvrirCreation()"><app-icon nom="person-add" [taille]="18" />Créer un compte</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Rechercher par nom ou e-mail" aria-label="Rechercher un utilisateur" [value]="recherche()" (input)="chercher($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Filtrer par état" [value]="etat()" (change)="filtrer($any($event.target).value)">
+    <option value="tous">Tous les comptes</option>
+    <option value="actifs">Actifs</option>
+    <option value="inactifs">Inactifs</option>
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !donnees()) {
+    <p class="vide">Chargement…</p>
+  } @else if (donnees(); as d) {
+    @if (d.contenu.length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Utilisateur</th><th>Rôles</th><th>État</th><th>Créé le</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (u of d.contenu; track u.id) {
+              <tr>
+                <td><span class="nom">{{ u.prenom }} {{ u.nom }}</span><br><span class="gris">{{ u.email }}</span></td>
+                <td><div class="puces">@for (r of u.roles; track r) { <span class="puce">{{ libelleRole(r) }}</span> }</div></td>
+                <td>
+                  <div class="puces">
+                    <span class="puce" [class.vert]="u.actif" [class.gris]="!u.actif">{{ u.actif ? 'Actif' : 'Inactif' }}</span>
+                    @if (u.mdpTemporaire) { <span class="puce orange">Mot de passe temporaire</span> }
+                  </div>
+                </td>
+                <td class="gris">{{ date(u.dateCreation) }}</td>
+                <td>
+                  <div class="actions">
+                    <button class="icone" type="button" title="Modifier les rôles" [attr.aria-label]="'Modifier les rôles de ' + u.email" (click)="ouvrirRoles(u)"><app-icon nom="shield-checkmark" [taille]="19" /></button>
+                    <button class="icone" type="button" title="Réinitialiser le mot de passe" [attr.aria-label]="'Réinitialiser le mot de passe de ' + u.email" (click)="reinitialiser(u)"><app-icon nom="key" [taille]="19" /></button>
+                    @if (u.actif) {
+                      <button class="icone danger" type="button" title="Désactiver le compte" [attr.aria-label]="'Désactiver ' + u.email" [disabled]="u.email === moi || traitement() === u.id" (click)="basculerActivation(u)"><app-icon nom="power" [taille]="19" /></button>
+                    } @else {
+                      <button class="reactiver" type="button" [attr.aria-label]="'Réactiver ' + u.email" [disabled]="traitement() === u.id" (click)="basculerActivation(u)"><app-icon nom="power" [taille]="16" />Réactiver</button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span>{{ d.total }} compte{{ d.total > 1 ? 's' : '' }} · page {{ d.page + 1 }} sur {{ d.pages || 1 }}</span>
+        <div class="boutons">
+          <button class="icone" type="button" aria-label="Page précédente" [disabled]="d.page <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+          <button class="icone" type="button" aria-label="Page suivante" [disabled]="d.page + 1 >= d.pages" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+        </div>
+      </div>
+    } @else { <p class="vide">Aucun compte ne correspond à cette recherche.</p> }
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('creer') {
+    <app-modal titre="Créer un compte" [largeur]="640" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="creer()" novalidate>
+        <div class="champ-f large">
+          <label for="f-type">Type de compte</label>
+          <select id="f-type" formControlName="type">
+            <optgroup label="Administrateurs">
+              @for (t of typesAdmin; track t) { <option [value]="t">{{ libelleRole(t) }}</option> }
+            </optgroup>
+            <optgroup label="Établissement">
+              <option value="ENSEIGNANT">Enseignant</option>
+              <option value="ETUDIANT">Étudiant</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="champ-f"><label for="f-prenom">Prénom</label><input id="f-prenom" formControlName="prenom" autocomplete="off">@if (formulaire.controls.prenom.touched && formulaire.controls.prenom.invalid) { <span class="erreur-champ">Obligatoire.</span> }</div>
+        <div class="champ-f"><label for="f-nom">Nom</label><input id="f-nom" formControlName="nom" autocomplete="off">@if (formulaire.controls.nom.touched && formulaire.controls.nom.invalid) { <span class="erreur-champ">Obligatoire.</span> }</div>
+        <div class="champ-f large"><label for="f-mail">Adresse e-mail</label><input id="f-mail" type="email" formControlName="email" autocomplete="off">@if (formulaire.controls.email.touched && formulaire.controls.email.invalid) { <span class="erreur-champ">Adresse e-mail invalide.</span> }</div>
+        @if (!estAdmin()) {
+          <div class="champ-f"><label for="f-mat">Matricule</label><input id="f-mat" formControlName="matricule" autocomplete="off"></div>
+        }
+        @if (estEtudiant()) { <div class="champ-f"><label for="f-niv">Niveau</label><input id="f-niv" formControlName="niveau" placeholder="ex. 5" autocomplete="off"></div> }
+        @if (estEnseignant()) {
+          <div class="champ-f"><label for="f-spe">Spécialité</label><input id="f-spe" formControlName="specialite" autocomplete="off"></div>
+          <div class="champ-f"><label for="f-grade">Grade</label><input id="f-grade" formControlName="grade" autocomplete="off"></div>
+        }
+        <div class="champ-f"><label for="f-tel">Téléphone (facultatif)</label><input id="f-tel" formControlName="telephone" autocomplete="off"></div>
+        <div class="champ-f large">
+          <label for="f-mdp">Mot de passe temporaire</label>
+          <div class="rang">
+            <input id="f-mdp" [type]="mdpVisible() ? 'text' : 'password'" formControlName="motDePasse" autocomplete="new-password">
+            <button class="icone" type="button" title="Afficher ou masquer" aria-label="Afficher ou masquer le mot de passe" (click)="mdpVisible.set(!mdpVisible())"><app-icon [nom]="mdpVisible() ? 'eye-off' : 'eye'" [taille]="19" /></button>
+            <button class="icone" type="button" title="Générer un autre mot de passe" aria-label="Générer un autre mot de passe" (click)="regenerer()"><app-icon nom="refresh" [taille]="19" /></button>
+          </div>
+          @if (formulaire.controls.motDePasse.touched && formulaire.controls.motDePasse.invalid) { <span class="erreur-champ">8 caractères minimum.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="creer()">{{ enCours() ? 'Création…' : 'Créer le compte' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('secret') {
+    <app-modal titre="Mot de passe temporaire" [largeur]="520" (fermer)="fermer()">
+      <p class="gris" style="margin:0 0 14px">{{ secret()?.message ?? 'Transmettez ce mot de passe à la personne concernée. Il ne sera plus affiché.' }}</p>
+      <p class="note" style="margin:0 0 6px">Compte : <strong>{{ secret()?.email }}</strong></p>
+      <div class="secret">
+        <span>{{ secret()?.motDePasseTemporaire }}</span>
+        <button class="icone" type="button" title="Copier" aria-label="Copier le mot de passe" (click)="copier(secret()?.motDePasseTemporaire ?? '')"><app-icon nom="copy" [taille]="19" /></button>
+      </div>
+      <div class="pied"><button class="btn indigo" type="button" (click)="fermer()">Terminé</button></div>
+    </app-modal>
+  }
+
+  @case ('roles') {
+    <app-modal titre="Modifier les rôles" [largeur]="480" (fermer)="fermer()">
+      <p class="gris" style="margin:0 0 14px">{{ cible()?.prenom }} {{ cible()?.nom }} · {{ cible()?.email }}</p>
+      <div class="cases">
+        @for (r of rolesDispo(); track r.id) {
+          <label class="case"><input type="checkbox" [checked]="rolesChoisis().includes(r.nom)" (change)="cocher(r.nom, $any($event.target).checked)">{{ libelleRole(r.nom) }}</label>
+        } @empty { <span class="note">Chargement des rôles…</span> }
+      </div>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours() || !rolesChoisis().length" (click)="enregistrerRoles()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('import') {
+    <app-modal titre="Importer des comptes (CSV)" [largeur]="680" (fermer)="fermer()">
+      <p class="gris" style="margin:0 0 12px;font-size:14px;line-height:1.55">Importez des étudiants et des enseignants (300 lignes maximum, UTF-8). Colonnes obligatoires : <strong>type, nom, prenom, email, matricule</strong>. <button class="lien-btn" type="button" (click)="telechargerModele()">Télécharger un modèle</button></p>
+      <input class="fichier" type="file" accept=".csv,text/csv" aria-label="Fichier CSV" (change)="choisirFichier($event)">
+      <div class="options">
+        <label><input type="checkbox" [checked]="simulation" (change)="simulation = $any($event.target).checked"> Simulation : vérifier le fichier sans créer de compte</label>
+        <label><input type="checkbox" [checked]="ignorerErreurs" (change)="ignorerErreurs = $any($event.target).checked"> Ignorer les lignes en erreur et importer les autres</label>
+      </div>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      @if (resultatImport(); as r) {
+        <div class="resume">
+          <span class="puce">{{ r.lignesLues }} ligne{{ r.lignesLues > 1 ? 's' : '' }} lue{{ r.lignesLues > 1 ? 's' : '' }}</span>
+          <span class="puce vert">{{ r.lignesValides }} valide{{ r.lignesValides > 1 ? 's' : '' }}</span>
+          <span class="puce" [class.orange]="r.simulation">{{ r.simulation ? 'Simulation : rien n\'est créé' : r.comptesCrees + ' compte(s) créé(s)' }}</span>
+        </div>
+        @if (r.erreurs.length) {
+          <ul class="liste-erreurs">@for (er of r.erreurs; track $index) { <li>Ligne {{ er.ligne }} : {{ er.message }}</li> }</ul>
+        }
+        @if (!r.simulation && r.comptes.length) {
+          <div class="petit-tableau"><table>
+            <thead><tr><th>E-mail</th><th>Type</th><th>Mot de passe temporaire</th></tr></thead>
+            <tbody>@for (c of r.comptes; track c.email) { <tr><td>{{ c.email }}</td><td>{{ c.type }}</td><td><code>{{ c.motDePasseTemporaire }}</code></td></tr> }</tbody>
+          </table></div>
+          <p class="note" style="margin:8px 0 0">Ces mots de passe ne seront plus affichés : téléchargez-les maintenant.</p>
+        }
+      }
+      <div class="pied">
+        @if (resultatImport() && !resultatImport()!.simulation && resultatImport()!.comptes.length) {
+          <button class="btn clair" type="button" (click)="telechargerIdentifiants()"><app-icon nom="download" [taille]="18" />Télécharger les identifiants</button>
+        }
+        <button class="btn clair" type="button" (click)="fermer()">Fermer</button>
+        <button class="btn indigo" type="button" [disabled]="enCours() || !fichier" (click)="importer()">{{ enCours() ? 'Traitement…' : simulation ? 'Vérifier le fichier' : 'Importer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

@@ -1,0 +1,209 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Référentiel pédagogique</p>
+    <h1>Enseignements</h1>
+    <p class="intro">Affectation des enseignants aux matières et aux classes pour chaque semestre. Suivez l'avancement de la saisie des notes et clôturez-la avant le calcul des résultats.</p>
+  </div>
+  @if (peutEcrire) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="nouveau()"><app-icon nom="add" [taille]="18" />Nouvel enseignement</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .06s">
+  <select class="champ" aria-label="Filtrer par semestre" (change)="filtrer('semestre', $any($event.target).value)">
+    <option value="" [selected]="!filtreSemestre()">Tous les semestres</option>
+    @for (g of groupesSemestres(); track g.formation.id) {
+      <optgroup [label]="g.formation.code">
+        @for (s of g.semestres; track s.id) { <option [value]="s.id" [selected]="filtreSemestre() === s.id">{{ s.nom }}</option> }
+      </optgroup>
+    }
+  </select>
+  <select class="champ" aria-label="Filtrer par classe" (change)="filtrer('classe', $any($event.target).value)">
+    <option value="" [selected]="!filtreClasse()">Toutes les classes</option>
+    @for (c of classesTriees(); track c.id) { <option [value]="c.id" [selected]="filtreClasse() === c.id">{{ c.nom }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par enseignant" (change)="filtrer('enseignant', $any($event.target).value)">
+    <option value="" [selected]="!filtreEnseignant()">Tous les enseignants</option>
+    @for (e of enseignantsTries(); track e.id) { <option [value]="e.id" [selected]="filtreEnseignant() === e.id">{{ e.nom }} {{ e.prenom }}</option> }
+  </select>
+  @if (filtreSemestre() || filtreClasse() || filtreEnseignant()) {
+    <button class="btn clair" type="button" (click)="reinitialiserFiltres()"><app-icon nom="close" [taille]="16" />Effacer les filtres</button>
+  }
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .12s">
+  @if (chargement() && !enseignements().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (lignes().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Matière</th><th>Classe</th><th>Enseignant</th><th>Semestre</th><th>Groupe</th><th class="num">Volume</th><th>Saisie</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (e of lignes(); track e.id) {
+            <tr>
+              <td><span class="nom">{{ e.matiere?.nom ?? '—' }}</span><br><span class="note">{{ e.matiere?.code }}</span></td>
+              <td>@if (e.classe) { <a class="lien-doux" [routerLink]="['/classes', e.classeId]">{{ e.classe.nom }}</a> } @else { — }</td>
+              <td>{{ e.enseignant ? e.enseignant.prenom + ' ' + e.enseignant.nom : '—' }}</td>
+              <td class="gris">{{ e.semestre?.nom ?? '—' }}</td>
+              <td>{{ e.groupe || '—' }}</td>
+              <td class="num">{{ e.volumeHoraire != null ? e.volumeHoraire + ' h' : '—' }}</td>
+              <td>
+                @if (e.cloture === true) { <span class="puce gris">Clôturée</span> }
+                @else if (e.cloture === false) { <span class="puce vert">Ouverte</span> }
+                @else { <span class="gris">—</span> }
+              </td>
+              <td>
+                <div class="actions">
+                  <button class="icone" type="button" title="Avancement de la saisie" [attr.aria-label]="'Avancement de la saisie : ' + (e.matiere?.nom ?? '') + ', ' + (e.classe?.nom ?? '')" (click)="voirAvancement(e)"><app-icon nom="stats-chart" [taille]="19" /></button>
+                  @if (peutEcrire) {
+                    @if (e.cloture === true) {
+                      <button class="icone" type="button" title="Rouvrir la saisie" [attr.aria-label]="'Rouvrir la saisie : ' + (e.matiere?.nom ?? '') + ', ' + (e.classe?.nom ?? '')" (click)="demander('rouvrir', e)"><app-icon nom="lock-open" [taille]="19" /></button>
+                    } @else {
+                      <button class="icone" type="button" title="Clôturer la saisie" [attr.aria-label]="'Clôturer la saisie : ' + (e.matiere?.nom ?? '') + ', ' + (e.classe?.nom ?? '')" (click)="demander('cloturer', e)"><app-icon nom="lock-closed" [taille]="19" /></button>
+                    }
+                    <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier l\'enseignement ' + (e.matiere?.nom ?? '') + ', ' + (e.classe?.nom ?? '')" (click)="modifier(e)"><app-icon nom="pencil" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer l\'enseignement ' + (e.matiere?.nom ?? '') + ', ' + (e.classe?.nom ?? '')" (click)="demander('supprimer', e)"><app-icon nom="trash" [taille]="19" /></button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span>{{ resume().total }} enseignement{{ resume().total > 1 ? 's' : '' }} · {{ resume().clotures }} clôturé{{ resume().clotures > 1 ? 's' : '' }}</span>
+      <span>Volume horaire : {{ resume().volume }} h</span>
+    </div>
+  } @else {
+    <p class="vide">{{ filtreSemestre() || filtreClasse() || filtreEnseignant() ? 'Aucun enseignement ne correspond à ces filtres.' : 'Aucun enseignement n\'est encore défini.' }}</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('editer') {
+    <app-modal [titre]="cible() ? 'Modifier l\'enseignement' : 'Nouvel enseignement'" [largeur]="620" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="eg-sem">Semestre</label>
+          <select id="eg-sem" formControlName="semestreId">
+            <option [ngValue]="null" disabled>Choisir un semestre</option>
+            @for (g of groupesSemestres(); track g.formation.id) {
+              <optgroup [label]="g.formation.code">
+                @for (s of g.semestres; track s.id) { <option [ngValue]="s.id">{{ s.nom }}</option> }
+              </optgroup>
+            }
+          </select>
+          @if (formulaire.controls.semestreId.touched && formulaire.controls.semestreId.invalid) { <span class="erreur-champ">Choisissez un semestre.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="eg-mat">Matière</label>
+          <select id="eg-mat" formControlName="matiereId">
+            <option [ngValue]="null" disabled>{{ formulaire.controls.semestreId.value ? (matieresDuSemestre().length ? 'Choisir une matière' : 'Aucune matière dans ce semestre') : 'Choisissez d\'abord le semestre' }}</option>
+            @for (m of matieresDuSemestre(); track m.id) { <option [ngValue]="m.id">{{ m.code }} · {{ m.nom }}</option> }
+          </select>
+          @if (formulaire.controls.matiereId.touched && formulaire.controls.matiereId.invalid) { <span class="erreur-champ">Choisissez une matière du semestre.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="eg-classe">Classe</label>
+          <select id="eg-classe" formControlName="classeId">
+            <option [ngValue]="null" disabled>{{ formulaire.controls.semestreId.value ? 'Choisir une classe' : 'Choisissez d\'abord le semestre' }}</option>
+            @for (c of classesDuSemestre(); track c.id) { <option [ngValue]="c.id">{{ c.nom }}</option> }
+          </select>
+          <span class="aide">Classes de la formation du semestre.</span>
+          @if (formulaire.controls.classeId.touched && formulaire.controls.classeId.invalid) { <span class="erreur-champ">Choisissez une classe.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="eg-ens">Enseignant</label>
+          <select id="eg-ens" formControlName="enseignantId">
+            <option [ngValue]="null" disabled>Choisir un enseignant</option>
+            @for (p of enseignantsTries(); track p.id) { <option [ngValue]="p.id">{{ p.nom }} {{ p.prenom }}</option> }
+          </select>
+          @if (formulaire.controls.enseignantId.touched && formulaire.controls.enseignantId.invalid) { <span class="erreur-champ">Choisissez un enseignant.</span> }
+        </div>
+        <div class="champ-f"><label for="eg-grp">Groupe</label><input id="eg-grp" formControlName="groupe" placeholder="ex. G1" autocomplete="off"></div>
+        <div class="champ-f">
+          <label for="eg-vol">Volume horaire (heures)</label>
+          <input id="eg-vol" type="number" min="0" step="1" formControlName="volumeHoraire">
+          @if (formulaire.controls.volumeHoraire.touched && formulaire.controls.volumeHoraire.invalid) { <span class="erreur-champ">Nombre d'heures entre 0 et 1000.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('avancement') {
+    <app-modal titre="Avancement de la saisie" [largeur]="680" (fermer)="fermer()">
+      <p class="gris" style="margin:0 0 14px">{{ cible()?.matiere?.nom }} · {{ cible()?.classe?.nom }} · {{ cible()?.enseignant ? cible()!.enseignant!.prenom + ' ' + cible()!.enseignant!.nom : '' }}</p>
+      @if (chargementAvancement()) {
+        <p class="note">Chargement…</p>
+      } @else if (avancement(); as a) {
+        <div class="etat-saisie" [class.close]="a.cloture">
+          <app-icon [nom]="a.cloture ? 'lock-closed' : 'lock-open'" [taille]="18" />
+          <span>{{ a.cloture ? 'Saisie clôturée' + (a.dateCloture ? ' le ' + dateHeure(a.dateCloture) : '') : 'Saisie ouverte : l\'enseignant peut encore saisir et soumettre des notes.' }}</span>
+        </div>
+        @if (a.evaluations.length) {
+          <ul class="avancement">
+            @for (ev of a.evaluations; track ev.id) {
+              <li>
+                <div class="ligne">
+                  <span class="nom">{{ libelleType(ev.type) }}@if (ev.anonyme) { <span class="puce gris" style="margin-left:8px">Anonyme</span> }</span>
+                  <span class="note">{{ ev.soumises }} soumise{{ ev.soumises > 1 ? 's' : '' }} sur {{ ev.attendues }}</span>
+                </div>
+                <div class="barre" role="img" [attr.aria-label]="ev.soumises + ' notes soumises, ' + ev.brouillons + ' brouillons, ' + manquantes(ev) + ' manquantes sur ' + ev.attendues">
+                  <span class="soumises" [style.width.%]="part(ev.soumises, ev.attendues)"></span>
+                  <span class="brouillons" [style.width.%]="part(ev.brouillons, ev.attendues)"></span>
+                </div>
+                <div class="legende">
+                  <span><i class="pastille soumises"></i>Soumises : {{ ev.soumises }}</span>
+                  <span><i class="pastille brouillons"></i>Brouillons : {{ ev.brouillons }}</span>
+                  <span><i class="pastille manquantes"></i>Manquantes : {{ manquantes(ev) }}</span>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="vide" style="padding:16px 0 0">Aucune évaluation n'a encore été créée pour cet enseignement.</p>
+        }
+      }
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        @if (peutEcrire && avancement(); as a) {
+          @if (a.cloture) {
+            <button class="btn clair" type="button" (click)="ouvrir('rouvrir')"><app-icon nom="lock-open" [taille]="18" />Rouvrir la saisie</button>
+          } @else {
+            <button class="btn clair" type="button" (click)="ouvrir('cloturer')"><app-icon nom="lock-closed" [taille]="18" />Clôturer la saisie</button>
+          }
+        }
+        <button class="btn indigo" type="button" (click)="fermer()">Fermer</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('cloturer') {
+    <app-confirmation titre="Clôturer la saisie" [danger]="false" libelle="Clôturer"
+      [message]="'Clôturer la saisie des notes de « ' + (cible()?.matiere?.nom ?? '') + ' » pour ' + (cible()?.classe?.nom ?? '') + ' ?'"
+      detail="Plus aucune note ne pourra être saisie ni modifiée. La clôture est refusée s'il reste des notes en brouillon ; elle est nécessaire au calcul des résultats du semestre."
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="basculerSaisie('cloturer')" (fermer)="fermer()" />
+  }
+  @case ('rouvrir') {
+    <app-confirmation titre="Rouvrir la saisie" [danger]="false" libelle="Rouvrir"
+      [message]="'Rouvrir la saisie des notes de « ' + (cible()?.matiere?.nom ?? '') + ' » pour ' + (cible()?.classe?.nom ?? '') + ' ?'"
+      detail="Les résultats déjà calculés pour ce semestre passeront à l'état « à recalculer »."
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="basculerSaisie('rouvrir')" (fermer)="fermer()" />
+  }
+  @case ('supprimer') {
+    <app-confirmation titre="Supprimer l'enseignement" [message]="'Supprimer l\'enseignement « ' + (cible()?.matiere?.nom ?? '') + ' » de ' + (cible()?.classe?.nom ?? '') + ' ?'"
+      detail="La suppression est refusée tant que des évaluations ou des séances y sont rattachées."
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="supprimer()" (fermer)="fermer()" />
+  }
+}

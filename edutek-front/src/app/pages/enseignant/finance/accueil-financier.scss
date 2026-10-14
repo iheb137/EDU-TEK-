@@ -1,0 +1,11 @@
+.kpi { display: block; color: inherit; transition: transform .25s, box-shadow .25s; }
+.kpi:hover { transform: translateY(-3px); box-shadow: 0 22px 40px -20px rgb(13 27 61 / 28%); }
+.colonne { flex: 1 1 340px; min-width: 0; display: flex; flex-direction: column; gap: 18px; }
+.colonne .petit { flex: 0 0 auto; }
+.sans-bord { border: 0; max-height: none; margin-top: 10px; }
+.sans-bord th:first-child, .sans-bord td:first-child { padding-left: 0; }
+.sans-bord th:last-child, .sans-bord td:last-child { padding-right: 0; }
+.sous-titre { margin: 20px 0 0; font-size: 14px; font-weight: 800; }
+.liste li { justify-content: space-between; }
+.tarif { margin: 14px 0 4px; font-size: 28px; font-weight: 800; }
+.lien-alerte { font-weight: 700; text-decoration: underline; margin-left: 6px; }

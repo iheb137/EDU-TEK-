@@ -1,0 +1,10 @@
+.rejet-ligne { margin-top: 4px; max-width: 260px; color: #b3261e; }
+.feuille { padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: #fbfcff; }
+.feuille header { display: flex; justify-content: space-between; align-items: baseline; padding-bottom: 12px; margin-bottom: 16px; border-bottom: 2px solid var(--navy-800); }
+.feuille .marque { font-size: 17px; font-weight: 800; color: var(--navy-800); }
+.feuille h3 { margin: 0 0 14px; font-size: 20px; font-weight: 800; }
+.feuille .fiche { background: #fff; }
+.url { word-break: break-all; font-weight: 600; }
+
+/* Bouton « Remis à l'étudiant » dans la colonne d'actions */
+.actions .btn.petit { padding: 7px 12px; font-size: 13px; gap: 6px; white-space: nowrap; }

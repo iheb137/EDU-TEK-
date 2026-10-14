@@ -1,0 +1,22 @@
+.btn.clair { text-decoration: none; color: var(--ink); }
+.vide.carte { margin-top: 18px; }
+.grille { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 980px) { .grille { grid-template-columns: 1fr; } }
+.colonne-droite { display: flex; flex-direction: column; gap: 20px; }
+.bloc { padding: 22px 24px; }
+.sous-titre { margin: 4px 0 0; }
+.echelle { margin: 18px 0 22px; }
+.unite { display: flex; align-items: center; gap: 8px;
+  input { max-width: 120px; font-variant-numeric: tabular-nums; }
+  span { font-weight: 700; color: var(--muted); } }
+.ordre { margin: 12px 0 0; }
+.valeurs { margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  > div { padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; }
+  dt { font-size: 13px; font-weight: 600; color: var(--muted); }
+  dd { margin: 6px 0 0; font-size: 28px; font-weight: 800; } }
+.impact { width: 100%; min-width: 0; margin: 14px 0 10px; border-collapse: collapse; font-size: 14px;
+  th, td { padding: 9px 10px; } th:first-child, td:first-child { padding-left: 0; } th:last-child, td:last-child { padding-right: 0; }
+  th:not(:first-child), td:not(:first-child) { text-align: right; }
+  td { font-weight: 700; }
+  .diff { color: var(--indigo); } }
+.conseils { margin: 12px 0 12px; padding-left: 18px; font-size: 14px; line-height: 1.6; color: var(--muted); li + li { margin-top: 6px; } }

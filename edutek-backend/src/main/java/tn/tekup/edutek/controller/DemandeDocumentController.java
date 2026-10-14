@@ -2,16 +2,13 @@ package tn.tekup.edutek.controller;
 
 import tn.tekup.edutek.dto.DemandeDocumentDto;
 import tn.tekup.edutek.dto.DemandeDocumentRequest;
-import tn.tekup.edutek.dto.DocumentGenereDto;
-import tn.tekup.edutek.dto.LivraisonRequest;
+import tn.tekup.edutek.dto.PretRetraitRequest;
 import tn.tekup.edutek.dto.RejetRequest;
 import tn.tekup.edutek.entity.AdminSupport;
 import tn.tekup.edutek.entity.DemandeDocument;
-import tn.tekup.edutek.entity.DocumentGenere;
 import tn.tekup.edutek.entity.Etudiant;
 import tn.tekup.edutek.repository.AdminSupportRepository;
 import tn.tekup.edutek.repository.DemandeDocumentRepository;
-import tn.tekup.edutek.repository.DocumentGenereRepository;
 import tn.tekup.edutek.repository.EtudiantRepository;
 import tn.tekup.edutek.service.NotificationService;
 import jakarta.validation.Valid;
@@ -24,8 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/demandes-documents")
@@ -33,11 +32,16 @@ import java.util.Locale;
 public class DemandeDocumentController {
 
     private static final List<String> TYPES = List.of("ATTESTATION_PRESENCE", "ATTESTATION_INSCRIPTION", "RELEVE_NOTES", "AUTRE");
-    private static final List<String> STATUTS = List.of("SOUMIS", "EN_TRAITEMENT", "PRET", "REJETE");
-    private static final List<String> OUVERTS = List.of("SOUMIS", "EN_TRAITEMENT");
+    private static final List<String> STATUTS = List.of("SOUMIS", "EN_TRAITEMENT", "PRET", "REMIS", "REJETE");
+    /** Une demande est « ouverte » tant que le papier n'a pas ete remis a l'etudiant. */
+    private static final List<String> OUVERTS = List.of("SOUMIS", "EN_TRAITEMENT", "PRET");
+    private static final Map<String, String> LIBELLES = Map.of(
+            "ATTESTATION_PRESENCE", "attestation de présence",
+            "ATTESTATION_INSCRIPTION", "attestation d'inscription",
+            "RELEVE_NOTES", "relevé de notes",
+            "AUTRE", "document");
 
     private final DemandeDocumentRepository demandeRepository;
-    private final DocumentGenereRepository documentRepository;
     private final EtudiantRepository etudiantRepository;
     private final AdminSupportRepository adminSupportRepository;
     private final NotificationService notificationService;
@@ -53,7 +57,7 @@ public class DemandeDocumentController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Type invalide. Valeurs : " + String.join(", ", TYPES));
         }
         if (demandeRepository.existsByEtudiantIdAndTypeDocumentAndStatutIn(etu.getId(), type, OUVERTS)) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Une demande de ce type est deja en cours de traitement");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Une demande de ce type est déjà en cours (ou prête à retirer au bureau)");
         }
         DemandeDocument d = new DemandeDocument();
         d.setEtudiant(etu);
@@ -63,7 +67,7 @@ public class DemandeDocumentController {
         for (AdminSupport a : adminSupportRepository.findAll()) {
             if (Boolean.TRUE.equals(a.getActif())) {
                 notificationService.notifier(a, "Nouvelle demande de document",
-                        type + " - " + etu.getPrenom() + " " + etu.getNom() + " (" + etu.getMatricule() + ")");
+                        libelle(type) + " - " + etu.getPrenom() + " " + etu.getNom() + " (" + etu.getMatricule() + ")");
             }
         }
         return DemandeDocumentDto.from(saved);
@@ -100,17 +104,6 @@ public class DemandeDocumentController {
         return DemandeDocumentDto.from(lirePourUtilisateur(id, auth));
     }
 
-    @GetMapping("/{id}/document")
-    @Transactional(readOnly = true)
-    public DocumentGenereDto document(@PathVariable Long id, Authentication auth) {
-        DemandeDocument d = lirePourUtilisateur(id, auth);
-        if (d.getDocumentGenere() == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Aucun document disponible pour cette demande (statut : " + d.getStatut() + ")");
-        }
-        return DocumentGenereDto.from(d.getDocumentGenere());
-    }
-
     @PostMapping("/{id}/prendre-en-charge")
     @Transactional
     @PreAuthorize("hasRole('ADMIN_SUPPORT')")
@@ -118,28 +111,48 @@ public class DemandeDocumentController {
         DemandeDocument d = verrouiller(id);
         if (!"SOUMIS".equals(d.getStatut())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Demande deja prise en charge ou cloturee (statut : " + d.getStatut() + ")");
+                    "Demande déjà prise en charge ou clôturée (statut : " + d.getStatut() + ")");
         }
         d.setTraitePar(adminConnecte(auth));
         d.setStatut("EN_TRAITEMENT");
         notificationService.notifier(d.getEtudiant(), "Demande de document en cours de traitement",
-                "Votre demande " + d.getTypeDocument() + " est prise en charge.");
+                "Votre demande (" + libelle(d.getTypeDocument()) + ") est prise en charge par l'administration.");
         return DemandeDocumentDto.from(d);
     }
 
-    @PostMapping("/{id}/livrer")
+    /** Le document papier est imprime et signe : l'etudiant est invite a passer le retirer. */
+    @PostMapping("/{id}/marquer-pret")
     @Transactional
     @PreAuthorize("hasRole('ADMIN_SUPPORT')")
-    public DemandeDocumentDto livrer(@PathVariable Long id, @Valid @RequestBody LivraisonRequest req, Authentication auth) {
+    public DemandeDocumentDto marquerPret(@PathVariable Long id, @Valid @RequestBody(required = false) PretRetraitRequest req,
+                                          Authentication auth) {
         DemandeDocument d = verrouiller(id);
         exigerAssigne(d, adminConnecte(auth));
-        DocumentGenere doc = new DocumentGenere();
-        doc.setType(d.getTypeDocument());
-        doc.setUrl(req.url().trim());
-        d.setDocumentGenere(documentRepository.save(doc));
+        String message = req == null || req.message() == null || req.message().isBlank() ? null : req.message().trim();
+        d.setMessageRetrait(message);
+        d.setDatePret(LocalDateTime.now());
         d.setStatut("PRET");
-        notificationService.notifier(d.getEtudiant(), "Document disponible",
-                "Votre document (" + d.getTypeDocument() + ") est pret.");
+        notificationService.notifier(d.getEtudiant(), "Document prêt à retirer",
+                "Votre document (" + libelle(d.getTypeDocument()) + ") est prêt. Présentez-vous à l'administration "
+                        + "muni de votre carte d'étudiant pour le retirer." + (message == null ? "" : " " + message));
+        return DemandeDocumentDto.from(d);
+    }
+
+    /** L'etudiant est passe au guichet : le document papier lui a ete remis. */
+    @PostMapping("/{id}/remettre")
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN_SUPPORT')")
+    public DemandeDocumentDto remettre(@PathVariable Long id, Authentication auth) {
+        DemandeDocument d = verrouiller(id);
+        if (!"PRET".equals(d.getStatut())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Seul un document prêt à retirer peut être remis (statut : " + d.getStatut() + ")");
+        }
+        d.setRemisPar(adminConnecte(auth));
+        d.setDateRemise(LocalDateTime.now());
+        d.setStatut("REMIS");
+        notificationService.notifier(d.getEtudiant(), "Document remis",
+                "Votre document (" + libelle(d.getTypeDocument()) + ") vous a été remis par l'administration.");
         return DemandeDocumentDto.from(d);
     }
 
@@ -156,20 +169,24 @@ public class DemandeDocumentController {
         }
         d.setStatut("REJETE");
         d.setMotifRejet(req.motif().trim());
-        notificationService.notifier(d.getEtudiant(), "Demande de document rejetee",
-                "Votre demande " + d.getTypeDocument() + " a ete rejetee. Motif : " + d.getMotifRejet());
+        notificationService.notifier(d.getEtudiant(), "Demande de document rejetée",
+                "Votre demande (" + libelle(d.getTypeDocument()) + ") a été rejetée. Motif : " + d.getMotifRejet());
         return DemandeDocumentDto.from(d);
     }
 
     private void exigerAssigne(DemandeDocument d, AdminSupport admin) {
         if (!"EN_TRAITEMENT".equals(d.getStatut())) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "La demande doit etre en cours de traitement (statut : " + d.getStatut() + ")");
+                    "La demande doit être en cours de traitement (statut : " + d.getStatut() + ")");
         }
         if (d.getTraitePar() == null || !d.getTraitePar().getId().equals(admin.getId())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Cette demande est prise en charge par un autre administrateur");
+                    "Cette demande est prise en charge par un autre agent du support");
         }
+    }
+
+    private static String libelle(String type) {
+        return LIBELLES.getOrDefault(type, type);
     }
 
     private DemandeDocument verrouiller(Long id) {

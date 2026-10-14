@@ -1,0 +1,32 @@
+.grille { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 18px; align-items: start; }
+.formulaire-diffusion { padding: 24px 26px 22px; }
+form { margin-top: 16px; display: flex; flex-direction: column; gap: 16px; }
+.audiences { margin: 0; padding: 0; border: 0; min-width: 0; }
+legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 700; }
+.choix { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.option { position: relative; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; cursor: pointer;
+  color: var(--muted); background: #fff; transition: border-color .2s, background .2s;
+  input { position: absolute; opacity: 0; pointer-events: none; }
+  span { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  strong { font-size: 14px; color: var(--ink); }
+  small { font-size: 12.5px; color: var(--faint); }
+  &:hover { border-color: #b9c4e2; }
+  &.actif { border-color: var(--indigo); background: #f3f6fe; color: var(--indigo); box-shadow: inset 0 0 0 1px var(--indigo); }
+  &:has(input:focus-visible) { outline: 2px solid var(--indigo); outline-offset: 2px; } }
+.champ-f select { cursor: pointer; }
+textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font: 500 14px/1.55 var(--font); background: #fff; color: var(--ink); width: 100%; resize: vertical; min-height: 150px; }
+.pied { margin-top: 4px; }
+
+.colonne-droite { display: flex; flex-direction: column; gap: 14px; }
+.recap { padding: 22px 24px; border-color: #b8e6d5; background: linear-gradient(180deg, #f2fbf7, #fff 70%);
+  .surtitre { display: flex; align-items: center; gap: 6px; color: #0f6b4f; }
+  .chiffre { margin: 4px 0 10px; font-size: 15px; color: var(--muted); strong { font-size: 34px; font-weight: 800; color: var(--ink); margin-right: 4px; } }
+  h2 { overflow-wrap: anywhere; } .gris { margin: 6px 0 0; font-size: 13.5px; } .note { margin: 10px 0 0; } }
+.aide, .historique { padding: 20px 22px; h2 { font-size: 15px; } }
+.aide ul { margin: 10px 0 0; padding-left: 18px; font-size: 13.5px; line-height: 1.6; color: var(--muted); li + li { margin-top: 4px; } }
+.historique ul { list-style: none; margin: 10px 0 0; padding: 0; }
+.historique li { display: flex; flex-direction: column; gap: 2px; padding: 9px 0; border-top: 1px solid #eef1f8; font-size: 13.5px; .gris { font-size: 12.5px; } }
+.confirm { margin: 0; font-size: 14.5px; line-height: 1.55; }
+
+@media (max-width: 960px) { .grille { grid-template-columns: 1fr; } }
+@media (max-width: 560px) { .choix { grid-template-columns: 1fr; } }

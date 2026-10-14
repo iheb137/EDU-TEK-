@@ -1,0 +1,26 @@
+.indicateurs { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+.indicateurs .carte { padding: 20px 22px; }
+.titre { font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.pastille { width: 38px; height: 38px; border-radius: 11px; color: #fff; display: flex; align-items: center; justify-content: center; }
+.valeur { margin-top: 12px; font-size: 34px; font-weight: 800; letter-spacing: -.02em; }
+.indicateurs .note { margin-top: 4px; display: block; }
+
+.duo { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 18px; align-items: stretch; }
+.grand { flex: 2 1 560px; min-width: 0; padding: 22px 24px; }
+.petit { flex: 1 1 320px; min-width: 0; padding: 22px 24px; }
+.roles { margin-top: 20px; display: flex; flex-direction: column; gap: 18px; font-size: 14px; }
+.piste { margin-top: 8px; height: 10px; border-radius: 5px; background: #eaeff8; overflow: hidden; }
+.remplissage { height: 100%; border-radius: 5px; background: var(--indigo); transform-origin: left; animation: grow .9s cubic-bezier(.2, .8, .2, 1) both; }
+
+.activite { margin: 14px 0 0; padding: 0; list-style: none; }
+.activite li { display: flex; flex-direction: column; gap: 2px; padding: 11px 0; border-top: 1px solid #eef1f8; font-size: 13.5px; }
+.activite li:first-child { border-top: 0; }
+.activite .quand { font-size: 12px; color: var(--faint); }
+.lien { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 13.5px; font-weight: 700; color: var(--indigo); }
+
+.raccourcis { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 18px; }
+.raccourci { display: flex; align-items: center; gap: 14px; padding: 18px 20px; transition: transform .25s, box-shadow .25s; }
+.raccourci:hover { transform: translateY(-3px); box-shadow: 0 22px 40px -20px rgb(13 27 61 / 28%); }
+.raccourci .pastille { background: var(--navy-800); flex-shrink: 0; }
+.raccourci strong { display: block; font-size: 14.5px; }
+.raccourci span.sous { font-size: 12.5px; color: var(--muted); }

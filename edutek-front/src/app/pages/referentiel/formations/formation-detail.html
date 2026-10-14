@@ -1,0 +1,112 @@
+<a class="retour" routerLink="/formations"><app-icon nom="arrow-back" [taille]="16" />Toutes les formations</a>
+
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Formation{{ formation() ? ' · ' + formation()!.code : '' }}</p>
+    <h1>{{ formation()?.nom ?? 'Formation' }}</h1>
+    <p class="intro">Plan d'études par semestre et règles appliquées au calcul des moyennes et des décisions de cette formation.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/semestres" [queryParams]="{ formation: id }"><app-icon nom="calendar" [taille]="18" />Semestres</a>
+    <a class="btn clair" routerLink="/classes"><app-icon nom="people" [taille]="18" />Classes</a>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement() && !plan()) {
+  <section class="carte rise" style="margin-top:22px"><p class="vide">Chargement…</p></section>
+} @else if (plan(); as p) {
+  <div class="chiffres rise" style="animation-delay: .06s">
+    <div class="chiffre"><strong>{{ p.semestres.length }}</strong><span>semestre{{ p.semestres.length > 1 ? 's' : '' }}</span></div>
+    <div class="chiffre"><strong>{{ nbMatieres(p) }}</strong><span>matière{{ nbMatieres(p) > 1 ? 's' : '' }}</span></div>
+    <div class="chiffre"><strong>{{ p.totalCredits }}</strong><span>crédits au total</span></div>
+    <div class="chiffre"><strong>{{ p.niveau || '—' }}</strong><span>niveau</span></div>
+  </div>
+
+  <div class="disposition">
+    <section class="rise" style="animation-delay: .12s" aria-labelledby="titre-plan">
+      <div class="bloc-tete"><h2 id="titre-plan">Plan d'études</h2></div>
+      @for (s of p.semestres; track s.id) {
+        <article class="carte semestre">
+          <header>
+            <div>
+              <h3>{{ s.nom }}</h3>
+              <p class="note">{{ s.dateDebut ? 'Du ' + date(s.dateDebut) + ' au ' + date(s.dateFin) : 'Dates non renseignées' }}</p>
+            </div>
+            <div class="puces">
+              <span class="puce">{{ s.matieres.length }} matière{{ s.matieres.length > 1 ? 's' : '' }}</span>
+              <span class="puce vert">{{ s.totalCredits }} crédit{{ s.totalCredits > 1 ? 's' : '' }}</span>
+              <a class="icone" title="Gérer les matières du semestre" [attr.aria-label]="'Gérer les matières de ' + s.nom" routerLink="/matieres" [queryParams]="{ semestre: s.id }"><app-icon nom="open" [taille]="18" /></a>
+            </div>
+          </header>
+          @if (s.matieres.length) {
+            <table>
+              <thead><tr><th>Code</th><th>Matière</th><th class="num">Coefficient</th><th class="num">Crédits</th></tr></thead>
+              <tbody>
+                @for (m of s.matieres; track m.id) {
+                  <tr><td><span class="code">{{ m.code }}</span></td><td>{{ m.nom }}</td><td class="num">{{ nombre(m.coefficient) || '—' }}</td><td class="num">{{ m.credits ?? '—' }}</td></tr>
+                }
+              </tbody>
+            </table>
+          } @else { <p class="vide">Aucune matière dans ce semestre.</p> }
+        </article>
+      } @empty {
+        <article class="carte"><p class="vide">Aucun semestre n'est rattaché à cette formation. Ajoutez-en depuis l'écran Semestres.</p></article>
+      }
+    </section>
+
+    <section class="carte bloc regles rise" style="animation-delay: .18s" aria-labelledby="titre-regles">
+      <div class="bloc-tete">
+        <h2 id="titre-regles">Règles de calcul</h2>
+        <div class="puces">
+          @if (regles()?.parDefaut) { <span class="puce gris">Valeurs par défaut</span> }
+          @if (regles()?.verrouillee) { <span class="puce orange"><app-icon nom="lock-closed" [taille]="12" /> Verrouillées</span> }
+        </div>
+      </div>
+      @if (regles()?.verrouillee) {
+        <p class="avis">Des notes existent déjà dans cette formation : les règles ne peuvent plus être modifiées.</p>
+      } @else if (regles()?.parDefaut) {
+        <p class="avis doux">Aucune règle propre n'a encore été définie : les valeurs ci-dessous sont celles appliquées par défaut. Elles restent modifiables jusqu'à la saisie de la première note.</p>
+      }
+      <form class="formulaire une-colonne" [formGroup]="formulaire" (ngSubmit)="enregistrerRegles()" novalidate>
+        <div class="champ-f">
+          <label for="r-max">Note maximale (barème)</label>
+          <input id="r-max" type="number" min="1" max="1000" step="1" formControlName="noteMax">
+          @if (formulaire.controls.noteMax.touched && formulaire.controls.noteMax.invalid) { <span class="erreur-champ">Valeur entre 1 et 1000.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="r-seuil">Seuil d'admission</label>
+          <input id="r-seuil" type="number" min="0" step="0.25" formControlName="seuilAdmission">
+          <span class="aide">Moyenne minimale pour valider le semestre.</span>
+          @if (formulaire.controls.seuilAdmission.touched && formulaire.controls.seuilAdmission.invalid) { <span class="erreur-champ">Valeur obligatoire, positive.</span> }
+        </div>
+        <label class="case-f"><input type="checkbox" formControlName="eliminatoire">Appliquer une note éliminatoire</label>
+        @if (formulaire.controls.eliminatoire.value) {
+          <div class="champ-f">
+            <label for="r-elim">Note éliminatoire</label>
+            <input id="r-elim" type="number" min="0" step="0.25" formControlName="noteEliminatoire">
+            <span class="aide">Une note de matière inférieure entraîne l'ajournement, quelle que soit la moyenne.</span>
+          </div>
+        }
+        <label class="case-f"><input type="checkbox" formControlName="compensation">Compensation entre matières</label>
+        <span class="aide marge">Si elle est activée, une matière non validée peut être compensée par la moyenne générale du semestre.</span>
+        <div class="champ-f">
+          <label for="r-dec">Nombre de décimales</label>
+          <select id="r-dec" formControlName="decimales">
+            @for (d of choixDecimales; track d) { <option [ngValue]="d">{{ d }} décimale{{ d > 1 ? 's' : '' }}{{ d === 2 ? ' (ex. 12,35)' : '' }}</option> }
+          </select>
+        </div>
+      </form>
+      @if (incoherence() && formulaire.enabled) { <p class="bandeau" role="alert">{{ incoherence() }}</p> }
+      @if (erreurRegles()) { <p class="bandeau" role="alert">{{ erreurRegles() }}</p> }
+      @if (peutEcrire && !regles()?.verrouillee) {
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="annuler()">Annuler</button>
+          <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrerRegles()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer les règles' }}</button>
+        </div>
+      }
+    </section>
+  </div>
+}

@@ -1,0 +1,22 @@
+.disposition { margin-top: 22px; display: grid; grid-template-columns: minmax(0, 1.65fr) minmax(300px, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 1100px) { .disposition { grid-template-columns: 1fr; } }
+.disposition > section > .bloc-tete { margin-bottom: 12px; }
+
+.semestre { overflow: hidden; margin-bottom: 14px; }
+.semestre header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; padding: 16px 20px 12px; }
+.semestre h3 { margin: 0; font-size: 15.5px; font-weight: 800; }
+.semestre .note { margin: 3px 0 0; }
+.semestre .puces { align-items: center; }
+.semestre .icone { width: 30px; height: 30px; }
+.semestre table { min-width: 0; font-size: 13.5px; }
+.semestre th { padding-top: 8px; padding-bottom: 8px; background: #f7f9fe; }
+.semestre td { padding-top: 10px; padding-bottom: 10px; }
+.semestre th:first-child, .semestre td:first-child { padding-left: 20px; width: 120px; }
+.semestre th:last-child, .semestre td:last-child { padding-right: 20px; }
+
+.regles { position: sticky; top: 16px; }
+.regles .puce { display: inline-flex; align-items: center; gap: 4px; }
+.une-colonne { grid-template-columns: 1fr; }
+.avis { margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; background: #fff1d6; color: #6b4600; font-size: 13.5px; line-height: 1.5; }
+.avis.doux { background: #eef2fd; color: #2a3f86; }
+.aide.marge { margin-top: -8px; }

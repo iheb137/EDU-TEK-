@@ -1,0 +1,133 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Relations entreprises</p>
+    <h1>Stages</h1>
+    <p class="intro">
+      @if (peutValider) { Examinez les stages proposés par les étudiants : entreprise, sujet et période. Validez la proposition ou rejetez-la en expliquant ce qui doit être revu. }
+      @else { Suivi des stages proposés par les étudiants et des décisions du service communication. }
+    </p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" [disabled]="chargement()" (click)="charger()"><app-icon nom="refresh" [taille]="18" />Actualiser</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <div class="onglets" role="tablist" aria-label="Filtrer par statut">
+    @for (o of onglets; track o.valeur) {
+      <button class="onglet" type="button" role="tab" [class.actif]="statut() === o.valeur" [attr.aria-selected]="statut() === o.valeur" (click)="statut.set(o.valeur)">
+        {{ o.libelle }}<span class="compte">{{ comptes()[o.valeur] ?? 0 }}</span>
+      </button>
+    }
+  </div>
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Étudiant, entreprise ou sujet" aria-label="Rechercher un stage" [value]="recherche()" (input)="recherche.set($any($event.target).value)">
+  </div>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !liste()) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste()) {
+    @if (affiches().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Étudiant</th><th>Entreprise et sujet</th><th>Période</th><th>Statut</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (s of affiches(); track s.id) {
+              <tr>
+                <td><span class="nom">{{ s.etudiantNom }}</span></td>
+                <td class="sujet"><strong>{{ s.entreprise }}</strong><br><span class="gris">{{ s.sujet }}</span></td>
+                <td class="td-court">{{ periode(s.dateDebut, s.dateFin) }}<br><span class="note">{{ duree(s) }}</span></td>
+                <td><span [class]="'puce ' + puce(s.statut)">{{ libelleStatut(s.statut) }}</span></td>
+                <td>
+                  <div class="actions">
+                    <button class="icone" type="button" title="Voir le détail" [attr.aria-label]="'Voir le stage de ' + s.etudiantNom" (click)="voir(s)"><app-icon nom="eye" [taille]="19" /></button>
+                    @if (peutValider && s.statut === 'PROPOSE') {
+                      <button class="icone ok" type="button" title="Valider" [attr.aria-label]="'Valider le stage de ' + s.etudiantNom" (click)="demanderValidation(s)"><app-icon nom="checkmark" [taille]="20" /></button>
+                      <button class="icone danger" type="button" title="Rejeter" [attr.aria-label]="'Rejeter le stage de ' + s.etudiantNom" (click)="demanderRejet(s)"><app-icon nom="close-circle" [taille]="19" /></button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination"><span>{{ affiches().length }} stage{{ affiches().length > 1 ? 's' : '' }}</span></div>
+    } @else {
+      <p class="vide">
+        @if (recherche().trim()) { Aucun stage ne correspond à cette recherche. }
+        @else {
+          @switch (statut()) {
+            @case ('PROPOSE') { Aucune proposition de stage en attente de validation. }
+            @case ('VALIDE') { Aucun stage validé pour le moment. }
+            @case ('REJETE') { Aucun stage rejeté. }
+            @default { Aucun stage n'a encore été proposé par les étudiants. }
+          }
+        }
+      </p>
+    }
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('detail') {
+    @if (cible(); as s) {
+      <app-modal titre="Proposition de stage" [largeur]="620" (fermer)="fermer()">
+        <dl class="fiche">
+          <dt>Étudiant</dt><dd><strong>{{ s.etudiantNom }}</strong></dd>
+          <dt>Entreprise</dt><dd>{{ s.entreprise }}</dd>
+          <dt>Sujet</dt><dd class="citation">{{ s.sujet }}</dd>
+          <dt>Période</dt><dd>{{ periode(s.dateDebut, s.dateFin) }} ({{ duree(s) }})</dd>
+          <dt>Statut</dt><dd><span [class]="'puce ' + puce(s.statut)">{{ libelleStatut(s.statut) }}</span></dd>
+          @if (s.motifRejet) { <dt>Motif du rejet</dt><dd class="citation rejet">{{ s.motifRejet }}</dd> }
+        </dl>
+        <div class="pied">
+          @if (peutValider && s.statut === 'PROPOSE') {
+            <button class="btn clair" type="button" (click)="demanderRejet(s)"><app-icon nom="close-circle" [taille]="18" />Rejeter</button>
+            <button class="btn vert" type="button" (click)="demanderValidation(s)"><app-icon nom="checkmark" [taille]="18" />Valider</button>
+          } @else {
+            <button class="btn indigo" type="button" (click)="fermer()">Fermer</button>
+          }
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('valider') {
+    @if (cible(); as s) {
+      <app-modal titre="Valider le stage" [largeur]="520" (fermer)="fermer()">
+        <p class="texte-boite">Stage de <strong>{{ s.etudiantNom }}</strong> chez <strong>{{ s.entreprise }}</strong>, {{ periode(s.dateDebut, s.dateFin) }}. Cette décision est définitive et l'étudiant en est informé.</p>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn vert" type="button" [disabled]="enCours()" (click)="valider()">{{ enCours() ? 'Validation…' : 'Valider le stage' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('rejeter') {
+    @if (cible(); as s) {
+      <app-modal titre="Rejeter le stage" [largeur]="560" (fermer)="fermer()">
+        <p class="texte-boite">Stage de <strong>{{ s.etudiantNom }}</strong> chez <strong>{{ s.entreprise }}</strong> : « {{ s.sujet }} ».</p>
+        <div class="champ-f">
+          <label for="s-motif">Motif du rejet</label>
+          <textarea id="s-motif" [formControl]="motifRejet" maxlength="500" placeholder="Ex. : sujet hors du périmètre de la formation, durée insuffisante…"></textarea>
+          @if (motifRejet.touched && motifRejet.invalid) { <span class="erreur-champ">Indiquez un motif d'au moins 5 caractères.</span> }
+          @else { <span class="aide">Le motif est communiqué à l'étudiant, qui pourra proposer un nouveau stage.</span> }
+        </div>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn rouge" type="button" [disabled]="enCours()" (click)="rejeter()">{{ enCours() ? 'Envoi…' : 'Rejeter le stage' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+}

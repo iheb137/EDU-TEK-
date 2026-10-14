@@ -1,0 +1,22 @@
+.fil { margin-top: 16px; display: flex; flex-direction: column; gap: 14px; max-width: 900px; }
+.actu { padding: 22px 26px 20px; }
+.haut { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 34px; }
+.meta { margin: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; font-size: 13px; font-weight: 600; color: var(--faint);
+  app-icon { color: var(--indigo); } }
+.sep { width: 4px; height: 4px; border-radius: 50%; background: #c3cbe0; }
+.actu h2 { margin-top: 6px; font-size: 20px; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; }
+.texte { margin-top: 10px; font-size: 14.5px; line-height: 1.7; color: #2b3a5e; white-space: pre-wrap; overflow-wrap: anywhere; }
+.texte.replie { max-height: calc(1.7em * 6); overflow: hidden; -webkit-mask-image: linear-gradient(180deg, #000 60%, transparent); mask-image: linear-gradient(180deg, #000 60%, transparent); }
+.bas { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; margin-top: 12px; &:empty { display: none; } }
+.lien-btn { all: unset; cursor: pointer; color: var(--indigo); font-weight: 700; font-size: 13.5px; &:hover { text-decoration: underline; } &:focus-visible { outline: 2px solid var(--indigo); } }
+.document { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 12px; border-radius: 9px; background: #eef2fd; color: var(--indigo);
+  font-size: 13.5px; font-weight: 700; transition: background .2s; &:hover { background: #e1e8fb; } }
+.pagination { border-top: 0; }
+.icone.danger:hover:not(:disabled) { background: #fce8e6; color: #b3261e; }
+.btn.rouge { background: #c0392b; }
+textarea { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); font: 500 14px/1.55 var(--font); background: #fff; color: var(--ink); width: 100%; resize: vertical; min-height: 180px; }
+.case-notifier { gap: 4px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: #f8faff; cursor: pointer; }
+.ligne-case { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700;
+  input { width: 18px; height: 18px; accent-color: var(--indigo); } }
+.case-notifier .note { padding-left: 28px; }
+@media (max-width: 560px) { .actu { padding: 18px 18px 16px; } .actu h2 { font-size: 18px; } }

@@ -1,0 +1,101 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Finance</p>
+    <h1>Tarifs horaires</h1>
+    <p class="intro">Le montant d'une séance est calculé avec le tarif en vigueur à sa date : d'abord le tarif du grade de l'enseignant, à défaut le tarif général. Pour changer un tarif, créez-en un nouveau avec sa date d'effet ; l'historique est conservé.</p>
+  </div>
+  @if (peutModifier) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="ouvrirCreation()"><app-icon nom="add" [taille]="18" />Nouveau tarif</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="indicateurs" aria-label="Tarifs en vigueur">
+  <article class="carte rise" style="animation-delay: .08s">
+    <div class="ligne"><span class="titre">Tarif général en vigueur</span><span class="pastille" style="background: var(--navy-800)"><app-icon nom="cash" [taille]="20" /></span></div>
+    <div class="valeur chiffre">{{ chargement() ? '…' : (general() ? montantFr(general()!.montant) : 'Aucun') }}</div>
+    <span class="note">{{ general() ? 'Par heure, depuis le ' + dateFr(general()!.dateDebut) : 'Sans tarif général, une séance sans tarif de grade ne peut pas être payée.' }}</span>
+  </article>
+  <article class="carte rise" style="animation-delay: .14s">
+    <div class="ligne"><span class="titre">Grades sans tarif spécifique</span><span class="pastille" style="background: var(--risk-mid)"><app-icon nom="ribbon" [taille]="20" /></span></div>
+    <div class="valeur">{{ chargement() ? '…' : gradesSansTarif().length }}</div>
+    <span class="note">
+      @if (gradesSansTarif().length) {
+        {{ gradesSansTarif().join(', ') }} : tarif général appliqué.
+        @if (peutModifier) { <button class="lien-btn" type="button" (click)="ouvrirCreation(gradesSansTarif()[0])">Définir un tarif</button> }
+      } @else { Chaque grade d'enseignant a son tarif. }
+    </span>
+  </article>
+</section>
+
+<section class="carte tableau rise" style="animation-delay: .2s">
+  @if (chargement() && !liste().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Grade</th><th class="droite">Montant horaire</th><th>Date d'effet</th><th>Statut</th>@if (peutModifier) { <th><span class="visuel-cache">Actions</span></th> }</tr></thead>
+        <tbody>
+          @for (t of liste(); track t.id) {
+            <tr>
+              <td>@if (t.grade) { <span class="nom">{{ t.grade }}</span> } @else { <span class="nom">Tarif général</span><span class="sous">Tous les grades sans tarif propre</span> }</td>
+              <td class="droite chiffre"><strong>{{ montantFr(t.montant) }}</strong></td>
+              <td class="chiffre">{{ dateFr(t.dateDebut) }}</td>
+              <td><span [class]="'puce ' + statut(t).classe">{{ statut(t).libelle }}</span></td>
+              @if (peutModifier) {
+                <td><div class="actions"><button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer le tarif ' + (t.grade || 'général') + ' du ' + dateFr(t.dateDebut)" (click)="demanderSuppression(t)"><app-icon nom="trash" [taille]="19" /></button></div></td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide">Aucun tarif n'est défini. Commencez par un tarif général : il s'applique à tous les enseignants dont le grade n'a pas de tarif propre.</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('creer') {
+    <app-modal titre="Nouveau tarif horaire" [largeur]="540" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="creer()" novalidate>
+        <div class="champ-f">
+          <label for="t-montant">Montant horaire (DT)</label>
+          <input id="t-montant" type="number" min="0.001" max="100000" step="0.001" formControlName="montant" placeholder="ex. 45">
+          @if (formulaire.controls.montant.touched && formulaire.controls.montant.invalid) { <span class="erreur-champ">Montant entre 0,001 et 100 000 DT.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="t-date">Date d'effet</label>
+          <input id="t-date" type="date" formControlName="dateDebut">
+          @if (formulaire.controls.dateDebut.touched && formulaire.controls.dateDebut.invalid) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="t-grade">Grade (facultatif)</label>
+          <input id="t-grade" formControlName="grade" list="grades-connus" autocomplete="off" placeholder="Laisser vide pour le tarif général">
+          <datalist id="grades-connus">@for (g of grades(); track g) { <option [value]="g"></option> }</datalist>
+          <span class="aide">Le grade doit correspondre à celui de la fiche enseignant (casse et espaces ignorés).</span>
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="creer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer le tarif' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-modal titre="Supprimer le tarif" [largeur]="500" (fermer)="fermer()">
+      <div class="recap"><strong>{{ cible()?.grade || 'Tarif général' }}</strong> · {{ montantFr(cible()?.montant) }} de l'heure<br>Applicable depuis le {{ dateFr(cible()?.dateDebut) }}</div>
+      <p class="gris" style="margin:0;font-size:14px;line-height:1.55">Un tarif déjà utilisé dans un état de paiement ne peut pas être supprimé.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="supprimer()"><app-icon nom="trash" [taille]="18" />{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

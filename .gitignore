@@ -1,4 +1,4 @@
-# IDE
+﻿# IDE
 .idea/
 .vscode/
 *.iml
@@ -27,3 +27,20 @@ edutek-ia/data/
 # Systeme
 Thumbs.db
 .DS_Store
+
+# ===== Fichiers locaux : ne jamais publier =====
+docs/uml/
+demo/
+notes-test/
+_build/
+/*.csv
+*.backup
+Demarrer-EduTek.bat
+Arreter-EduTek.bat
+edutek-backend/Peupler-Demo.ps1
+edutek-backend/openapi.json
+
+# ===== Secrets et donnÃ©es d'exÃ©cution =====
+**/secrets.properties
+**/.env
+edutek-backend/uploads/

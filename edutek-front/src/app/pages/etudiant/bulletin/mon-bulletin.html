@@ -1,0 +1,115 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Scolarité</p>
+    <h1>Mon bulletin</h1>
+    <p class="intro">Moyennes par matière et crédits du semestre choisi. La moyenne générale, la décision et le rang sont communiqués dès que l'établissement publie les résultats.</p>
+  </div>
+  <div class="boutons">
+    @if (semestres().length) {
+      <label class="choix">
+        <span class="visuel-cache">Semestre</span>
+        <select (change)="choisir($any($event.target).value)" aria-label="Choisir le semestre">
+          @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestreId()">{{ s.nom }}</option> }
+        </select>
+      </label>
+    }
+    <button class="btn clair" type="button" (click)="imprimer()" [disabled]="!bulletin()"><app-icon nom="download" [taille]="18" />Imprimer</button>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+@if (erreurBulletin()) { <p class="bandeau" role="alert">{{ erreurBulletin() }}</p> }
+
+@if (chargement()) {
+  <section class="carte bloc rise"><p class="vide" style="padding:0">Chargement…</p></section>
+} @else if (!erreur()) {
+  @if (!semestres().length) {
+    <section class="carte bloc rise"><p class="vide-bloc"><strong>Aucun semestre défini.</strong>Votre bulletin sera disponible dès l'ouverture d'un semestre.</p></section>
+  } @else {
+    @if (chargementBulletin()) {
+      <section class="carte bloc rise"><p class="vide" style="padding:0">Chargement du bulletin…</p></section>
+    } @else if (bulletin(); as b) {
+      @if (!publie()) {
+        <p class="info rise" role="status"><app-icon nom="time" [taille]="18" />Les résultats de ce semestre ne sont pas encore publiés : les moyennes par matière sont provisoires et peuvent évoluer.</p>
+      }
+
+      <section class="indicateurs" aria-label="Synthèse du semestre">
+        @for (k of cartes(); track k.titre; let i = $index) {
+          <article class="carte rise" [style.animation-delay]="(0.1 + i * 0.08) + 's'">
+            <div class="ligne"><span class="titre">{{ k.titre }}</span><span class="pastille" [style.background]="k.couleur"><app-icon [nom]="k.icone" [taille]="20" /></span></div>
+            <div class="valeur" [class.texte]="k.texte">{{ k.valeur }}@if (k.sur) {<small>/ 20</small>}</div>
+            <div class="note">{{ k.note }}</div>
+          </article>
+        }
+      </section>
+
+      <section class="carte tableau rise" style="animation-delay: .4s; margin-top: 22px">
+        <div class="ligne tete"><h2>{{ b.semestreNom }}</h2><span class="note">{{ b.matieres.length }} matière{{ b.matieres.length > 1 ? 's' : '' }} · {{ creditsTotal() }} crédits</span></div>
+        @if (b.matieres.length) {
+          <div class="defile">
+            <table>
+              <thead><tr><th>Code</th><th>Matière</th><th class="num">Coefficient</th><th class="num">Crédits</th><th class="num">{{ publie() ? 'Moyenne' : 'Moyenne provisoire' }}</th><th>Résultat</th></tr></thead>
+              <tbody>
+                @for (m of b.matieres; track m.matiereId) {
+                  <tr>
+                    <td class="gris">{{ m.code }}</td>
+                    <td><span class="nom">{{ m.nom }}</span></td>
+                    <td class="num">{{ nombre(m.coefficient) }}</td>
+                    <td class="num">{{ m.credits }}</td>
+                    <td class="num"><span class="note-val" [class.faible]="m.moyenne != null && m.moyenne < 10">{{ nombre(m.moyenne) }}</span>@if (m.moyenne != null) {<span class="sur"> / 20</span>}</td>
+                    <td>
+                      @if (m.moyenne == null) { <span class="puce gris">Pas encore de note</span> }
+                      @else { <span class="puce" [class.vert]="m.valide" [class.rouge]="!m.valide">{{ m.valide ? 'Validée' : 'Non validée' }}</span> }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+              @if (publie()) {
+                <tfoot><tr><td></td><td><strong>Moyenne générale</strong></td><td></td><td class="num"><strong>{{ b.creditsObtenus ?? '—' }}</strong></td><td class="num"><strong class="note-val">{{ nombre(b.moyenne) }}</strong><span class="sur"> / 20</span></td><td><span class="puce indigo">{{ decision(b.decision) }}</span></td></tr></tfoot>
+              }
+            </table>
+          </div>
+        } @else { <p class="vide-bloc">Aucune matière n'est encore rattachée à ce semestre.</p> }
+      </section>
+
+      @if (indicateursSuivi().length) {
+        <section class="carte bloc rise" style="animation-delay: .5s">
+          <div class="ligne"><h2>Indicateurs de suivi</h2>@if (dateIndicateurs()) { <span class="note">Calculés le {{ dateHeure(dateIndicateurs()) }}</span> }</div>
+          <div class="grille-ind">
+            @for (i of indicateursSuivi(); track i.nom) {
+              <div class="ind"><span class="note">{{ i.libelle }}</span><strong>{{ i.valeur }}</strong></div>
+            }
+          </div>
+          <p class="note" style="margin:14px 0 0">Indicateurs calculés pour le suivi pédagogique ; seul le bulletin publié a une valeur officielle.</p>
+        </section>
+      }
+    }
+
+    <section class="carte tableau rise" style="animation-delay: .6s; margin-top: 22px">
+      <div class="ligne tete"><h2>Résultats publiés</h2><span class="note">Tous semestres</span></div>
+      @if (historique().length) {
+        <div class="defile">
+          <table>
+            <thead><tr><th>Semestre</th><th class="num">Moyenne</th><th class="num">Crédits</th><th>Décision</th><th>Rang classe</th><th>Rang filière</th><th><span class="visuel-cache">Détail</span></th></tr></thead>
+            <tbody>
+              @for (r of historique(); track r.id) {
+                <tr>
+                  <td><span class="nom">{{ r.semestreNom }}</span></td>
+                  <td class="num"><span class="note-val" [class.faible]="r.moyenne != null && r.moyenne < 10">{{ nombre(r.moyenne) }}</span></td>
+                  <td class="num">{{ r.creditsObtenus ?? '—' }}</td>
+                  <td>{{ decision(r.decision) }}</td>
+                  <td class="gris">{{ rang(r.rangClasse, r.effectifClasse) }}</td>
+                  <td class="gris">{{ rang(r.rangFiliere, r.effectifFiliere) }}</td>
+                  <td><div class="actions"><button class="icone" type="button" title="Afficher le bulletin" [attr.aria-label]="'Afficher le bulletin de ' + r.semestreNom" (click)="choisir(r.semestreId)"><app-icon nom="arrow-forward" [taille]="19" /></button></div></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="vide-bloc">Aucun résultat n'a encore été publié. Vous serez notifié dès la publication des résultats d'un semestre.</p>
+      }
+    </section>
+    <p class="note" style="margin-top:14px">Le détail de chaque évaluation est disponible dans <a class="lien" routerLink="/mes-notes" [queryParams]="{ semestre: semestreId() }">Mes notes</a>.</p>
+  }
+}

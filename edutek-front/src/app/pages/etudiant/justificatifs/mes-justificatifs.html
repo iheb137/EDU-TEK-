@@ -1,0 +1,106 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Assiduité</p>
+    <h1>Mes justificatifs d'absence</h1>
+    <p class="intro">Déposez un justificatif pour une absence passée (31 jours au plus par dépôt). Une fois validé par le support administratif, les absences de la période sont marquées comme justifiées.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/mes-presences"><app-icon nom="calendar" [taille]="18" />Mes présences</a>
+    <button class="btn indigo" type="button" (click)="ouvrir(null)"><app-icon nom="add" [taille]="18" />Déposer un justificatif</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="carte tableau rise" style="animation-delay: .1s; margin-top: 22px">
+  @if (chargement()) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste().length) {
+    <div class="ligne tete"><h2>Justificatifs déposés</h2><span class="note">{{ liste().length }} au total · {{ enAttente() }} en attente</span></div>
+    <div class="defile">
+      <table>
+        <thead><tr><th>Période</th><th>Motif</th><th>Pièce jointe</th><th>Statut</th><th>Déposé le</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (j of liste(); track j.id) {
+            <tr>
+              <td><span class="nom">{{ periode(j) }}</span></td>
+              <td>{{ motif(j.motif) }}@if (j.commentaire) { <br><span class="gris">{{ j.commentaire }}</span> }</td>
+              <td>@if (j.pieceUrl) { <a class="lien" [href]="j.pieceUrl" target="_blank" rel="noopener"><app-icon nom="open" [taille]="16" />Ouvrir</a> } @else { <span class="gris">Aucune</span> }</td>
+              <td>
+                <span class="puce" [class.orange]="j.statut === 'SOUMIS'" [class.vert]="j.statut === 'VALIDE'" [class.rouge]="j.statut === 'REJETE'">{{ statut(j.statut) }}</span>
+                @if (j.statut === 'VALIDE') { <span class="note" style="display:block;margin-top:4px">{{ j.nbAbsencesJustifiees ?? 0 }} absence{{ (j.nbAbsencesJustifiees ?? 0) > 1 ? 's' : '' }} justifiée{{ (j.nbAbsencesJustifiees ?? 0) > 1 ? 's' : '' }}</span> }
+                @if (j.statut === 'REJETE' && j.motifRejet) { <span class="motif-rejet">Motif : {{ j.motifRejet }}</span> }
+              </td>
+              <td class="gris" style="white-space:nowrap">{{ dateHeure(j.dateSoumission) }}</td>
+              <td>
+                @if (j.statut === 'SOUMIS') {
+                  <div class="actions">
+                    <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier le justificatif : ' + periode(j)" (click)="ouvrir(j)"><app-icon nom="create" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Retirer" [attr.aria-label]="'Retirer le justificatif : ' + periode(j)" (click)="demanderRetrait(j)"><app-icon nom="trash" [taille]="19" /></button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide-bloc"><strong>Aucun justificatif déposé.</strong>Si vous avez été absent pour un motif valable (maladie, raison familiale, démarche administrative), déposez un justificatif pour régulariser la période.</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('formulaire') {
+    <app-modal [titre]="cible() ? 'Modifier le justificatif' : 'Déposer un justificatif'" [largeur]="600" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f">
+          <label for="j-debut">Premier jour d'absence</label>
+          <input id="j-debut" type="date" formControlName="dateDebut" [max]="maxDate">
+          @if (champInvalide('dateDebut')) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="j-fin">Dernier jour d'absence</label>
+          <input id="j-fin" type="date" formControlName="dateFin" [max]="maxDate">
+          @if (champInvalide('dateFin')) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        @if (erreurPeriode()) { <span class="erreur-champ champ-f large">{{ erreurPeriode() }}</span> }
+        <div class="champ-f large">
+          <label for="j-motif">Motif</label>
+          <select id="j-motif" formControlName="motif">
+            <option value="" disabled>Choisir un motif</option>
+            @for (m of motifs; track m[0]) { <option [value]="m[0]">{{ m[1] }}</option> }
+          </select>
+          @if (champInvalide('motif')) { <span class="erreur-champ">Choisissez un motif.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="j-comm">Commentaire (facultatif)</label>
+          <textarea id="j-comm" formControlName="commentaire" maxlength="500" placeholder="Précisions utiles au support administratif"></textarea>
+          @if (champInvalide('commentaire')) { <span class="erreur-champ">500 caractères au maximum.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="j-piece">Lien vers la pièce justificative (facultatif)</label>
+          <input id="j-piece" type="url" formControlName="pieceUrl" placeholder="https://…" autocomplete="off">
+          @if (champInvalide('pieceUrl')) { <span class="erreur-champ">Saisissez une adresse commençant par http:// ou https://.</span> }
+          @else { <span class="aide">Certificat médical ou document déposé sur un espace de stockage partagé.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : cible() ? 'Enregistrer' : 'Envoyer le justificatif' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('retirer') {
+    <app-modal titre="Retirer le justificatif" [largeur]="480" (fermer)="fermer()">
+      <p class="texte-fenetre">Le justificatif {{ cible() ? periode(cible()!).toLowerCase() : '' }} sera supprimé et ne sera pas examiné par le support administratif. Cette action est définitive.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn danger" type="button" [disabled]="enCours()" (click)="retirer()">{{ enCours() ? 'Retrait…' : 'Retirer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

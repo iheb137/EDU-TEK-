@@ -68,6 +68,10 @@ public class EvaluationController {
     public EvaluationDto modifier(@PathVariable Long id, @Valid @RequestBody EvaluationDto dto, Authentication auth) {
         Evaluation ev = trouver(id);
         acces.verifierProprietaire(auth, ev.getEnseignement());
+        if (!acces.estAdminPedagogie(auth) && noteRepository.countByEvaluationIdAndStatut(id, "SOUMISE") > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Des notes ont deja ete soumises pour cette evaluation : seule l'administration pedagogique peut la modifier ou la supprimer");
+        }
         appliquer(ev, dto, auth);
         return EvaluationDto.from(evaluationRepository.save(ev));
     }
@@ -78,6 +82,10 @@ public class EvaluationController {
     public void supprimer(@PathVariable Long id, Authentication auth) {
         Evaluation ev = trouver(id);
         acces.verifierProprietaire(auth, ev.getEnseignement());
+        if (!acces.estAdminPedagogie(auth) && noteRepository.countByEvaluationIdAndStatut(id, "SOUMISE") > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Des notes ont deja ete soumises pour cette evaluation : seule l'administration pedagogique peut la modifier ou la supprimer");
+        }
         evaluationRepository.delete(ev);
     }
 

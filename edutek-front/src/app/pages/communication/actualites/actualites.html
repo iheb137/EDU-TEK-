@@ -1,0 +1,116 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Communication</p>
+    <h1>Actualités</h1>
+    <p class="intro">Annonces, événements et informations officielles de l'établissement.</p>
+  </div>
+  @if (peutPublier) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="ouvrirPublication()"><app-icon nom="megaphone" [taille]="18" />Publier une actualité</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Rechercher une actualité" aria-label="Rechercher une actualité" [value]="recherche()" (input)="chercher($any($event.target).value)">
+  </div>
+</div>
+
+<div class="fil rise" style="animation-delay: .18s">
+  @if (chargement() && !donnees()) {
+    <div class="carte"><p class="vide">Chargement…</p></div>
+  } @else if (donnees(); as d) {
+    @for (a of d.contenu; track a.id) {
+      <article class="carte actu" [attr.aria-labelledby]="'actu-' + a.id">
+        <div class="haut">
+          <p class="meta"><app-icon nom="calendar" [taille]="15" /><time [attr.datetime]="a.datePublication" [title]="dateHeure(a.datePublication)">{{ date(a.datePublication) }}</time>
+            @if (a.auteurNom) { <span class="sep" aria-hidden="true"></span><span>{{ a.auteurNom }}</span> }
+          </p>
+          @if (peutPublier || peutSupprimer) {
+            <div class="actions">
+              @if (peutPublier) {
+                <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier : ' + a.titre" (click)="ouvrirModification(a)"><app-icon nom="pencil" [taille]="18" /></button>
+              }
+              @if (peutSupprimer) {
+                <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer : ' + a.titre" (click)="demanderSuppression(a)"><app-icon nom="trash" [taille]="18" /></button>
+              }
+            </div>
+          }
+        </div>
+        <h2 [id]="'actu-' + a.id">{{ a.titre }}</h2>
+        <div class="texte" [class.replie]="estLong(a) && !deplie(a)">{{ a.contenu }}</div>
+        <div class="bas">
+          @if (estLong(a)) {
+            <button class="lien-btn" type="button" [attr.aria-expanded]="deplie(a)" (click)="basculer(a)">{{ deplie(a) ? 'Réduire' : 'Lire la suite' }}</button>
+          }
+          @if (lienSur(a.lienDocument)) {
+            <a class="document" [href]="a.lienDocument" target="_blank" rel="noopener noreferrer"><app-icon nom="document-attach" [taille]="17" />Consulter le document<span class="visuel-cache"> (nouvel onglet)</span><app-icon nom="open" [taille]="14" /></a>
+          }
+        </div>
+      </article>
+    } @empty {
+      <div class="carte">
+        <p class="vide">@if (recherche().trim()) { Aucune actualité ne correspond à « {{ recherche().trim() }} ». } @else { Aucune actualité publiée pour le moment. }</p>
+      </div>
+    }
+    @if (d.pages > 1) {
+      <div class="carte pagination">
+        <span>{{ d.total }} actualité{{ d.total > 1 ? 's' : '' }} · page {{ d.page + 1 }} sur {{ d.pages }}</span>
+        <div class="boutons">
+          <button class="icone" type="button" aria-label="Page précédente" [disabled]="d.page <= 0 || chargement()" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+          <button class="icone" type="button" aria-label="Page suivante" [disabled]="d.page + 1 >= d.pages || chargement()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+        </div>
+      </div>
+    }
+  }
+</div>
+
+@switch (fenetre()) {
+  @case ('editer') {
+    <app-modal [titre]="cible() ? 'Modifier l\'actualité' : 'Publier une actualité'" [largeur]="680" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="a-titre">Titre</label>
+          <input id="a-titre" formControlName="titre" maxlength="200" autocomplete="off">
+          @if (formulaire.controls.titre.touched && formulaire.controls.titre.invalid) { <span class="erreur-champ">Le titre est obligatoire (200 caractères maximum).</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="a-contenu">Contenu</label>
+          <textarea id="a-contenu" formControlName="contenu" rows="9"></textarea>
+          @if (formulaire.controls.contenu.touched && formulaire.controls.contenu.invalid) { <span class="erreur-champ">Le contenu est obligatoire.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="a-lien">Lien vers un document (facultatif)</label>
+          <input id="a-lien" type="url" formControlName="lienDocument" placeholder="https://…" autocomplete="off">
+          @if (formulaire.controls.lienDocument.touched && formulaire.controls.lienDocument.invalid) { <span class="erreur-champ">Adresse invalide : elle doit commencer par https:// ou http://.</span> }
+        </div>
+        @if (!cible()) {
+          <label class="case-notifier champ-f large">
+            <span class="ligne-case"><input type="checkbox" [checked]="notifier" (change)="notifier = $any($event.target).checked">Notifier tous les utilisateurs de l'établissement</span>
+            <span class="note">Chaque compte recevra une notification avec le titre de l'actualité.</span>
+          </label>
+        }
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : cible() ? 'Enregistrer' : 'Publier' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-modal titre="Supprimer l'actualité" [largeur]="480" (fermer)="fermer()">
+      <p style="margin:0 0 6px;font-size:14.5px;line-height:1.55">Supprimer définitivement « <strong>{{ cible()?.titre }}</strong> » ? Elle disparaîtra du fil de tous les utilisateurs.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn rouge" type="button" [disabled]="enCours()" (click)="supprimer()"><app-icon nom="trash" [taille]="17" />{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

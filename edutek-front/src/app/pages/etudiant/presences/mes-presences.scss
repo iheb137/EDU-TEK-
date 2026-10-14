@@ -1,0 +1,7 @@
+.duo > .principal { flex: 2 1 600px; padding: 0; overflow: hidden; }
+.duo > .cote { flex: 1 1 280px; align-self: flex-start; }
+.tete h2 { font-size: 17px; }
+table { min-width: 600px; }
+tr.absence td:first-child { box-shadow: inset 3px 0 0 #f0a01c; }
+.matieres { margin-top: 18px; display: flex; flex-direction: column; gap: 18px; font-size: 13.5px;
+  .ligne { margin-bottom: 8px; } }

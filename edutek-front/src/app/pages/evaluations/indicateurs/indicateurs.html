@@ -1,0 +1,82 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Pédagogie</p>
+    <h1>Indicateurs académiques</h1>
+    <p class="intro">Moyenne, crédits, matières non validées et assiduité de chaque étudiant pour un semestre. Ces indicateurs alimentent l'analyse du risque de décrochage ; recalculez-les après une modification des notes ou des présences.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" [disabled]="!lignes().length" (click)="exporter()"><app-icon nom="download" [taille]="18" />Exporter</button>
+    <button class="btn indigo" type="button" [disabled]="calcul() || !semestre()" (click)="calculer()"><app-icon nom="calculator" [taille]="18" />{{ calcul() ? 'Calcul…' : (etudiant() ? 'Calculer pour cet étudiant' : 'Calculer les indicateurs') }}</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <select class="champ" aria-label="Semestre" (change)="choisir('semestre', $any($event.target).value)">
+    @for (s of ref.semestres(); track s.id) { <option [value]="s.id" [selected]="semestre() === s.id">{{ s.nom }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par classe" (change)="choisir('classe', $any($event.target).value)">
+    <option value="" [selected]="!classe()">Toutes les classes</option>
+    @for (c of ref.classes(); track c.id) { <option [value]="c.id" [selected]="classe() === c.id">{{ c.nom }}</option> }
+  </select>
+  <select class="champ" aria-label="Étudiant" (change)="choisir('etudiant', $any($event.target).value)">
+    <option value="" [selected]="!etudiant()">Tous les étudiants</option>
+    @for (e of etudiantsProposes(); track e.id) { <option [value]="e.id" [selected]="etudiant() === e.id">{{ e.nom }} {{ e.prenom }} · {{ e.matricule }}</option> }
+  </select>
+  @if (!etudiant()) {
+    <div class="recherche"><app-icon nom="search" [taille]="18" /><input type="search" placeholder="Rechercher par nom ou matricule" aria-label="Rechercher un étudiant" [value]="recherche()" (input)="recherche.set($any($event.target).value); numero.set(0)"></div>
+  }
+</div>
+
+@if (chargement() && !donnees()) {
+  <section class="carte tableau"><p class="vide">Chargement…</p></section>
+} @else if (donnees()) {
+  @if (lignes().length) {
+    <div class="syntheses rise" style="animation-delay: .14s">
+      @for (s of syntheses(); track s.nom) {
+        <div class="carte tuile"><span>{{ s.libelle }}</span><strong>{{ formater(s.moyenne, s.format === 'entier' ? 'note' : s.format) }}</strong><em>{{ etudiant() ? 'valeur' : 'moyenne sur ' + lignes().length + ' étudiant' + (lignes().length > 1 ? 's' : '') }}</em></div>
+      }
+    </div>
+  }
+  <section class="carte tableau rise" style="animation-delay: .18s">
+    @if (lignes().length) {
+      <div class="defile">
+        <table>
+          <thead>
+            <tr>
+              <th [attr.aria-sort]="sensTri('nom')"><button class="tri" type="button" (click)="trier('nom')">Étudiant @if (sensTri('nom') !== 'none') { <app-icon nom="chevron-down" [class.haut]="sensTri('nom') === 'ascending'" [taille]="13" /> }</button></th>
+              <th>Classe</th>
+              @for (c of colonnes(); track c.nom) {
+                <th class="num" [attr.aria-sort]="sensTri(c.nom)"><button class="tri" type="button" (click)="trier(c.nom)">{{ c.libelle }} @if (sensTri(c.nom) !== 'none') { <app-icon nom="chevron-down" [class.haut]="sensTri(c.nom) === 'ascending'" [taille]="13" /> }</button></th>
+              }
+            </tr>
+          </thead>
+          <tbody>
+            @for (l of pageCourante(); track l.etudiantId) {
+              <tr>
+                <td><span class="nom">{{ l.et ? l.et.nom + ' ' + l.et.prenom : 'Étudiant n° ' + l.etudiantId }}</span><br><span class="gris petit">{{ l.et?.matricule }}</span></td>
+                <td>{{ ref.classesParId().get(l.et?.classeId ?? 0)?.nom ?? '–' }}</td>
+                @for (c of colonnes(); track c.nom) {
+                  <td class="num" [class.alerte-v]="(c.nom === 'MOYENNE_SEMESTRE' && l.valeurs[c.nom] < 10) || (c.format === 'taux' && l.valeurs[c.nom] >= 0.2)">{{ formater(l.valeurs[c.nom], c.format) }}</td>
+                }
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span>{{ lignes().length }} étudiant{{ lignes().length > 1 ? 's' : '' }}@if (dernierCalcul()) { · dernier calcul le {{ dateHeure(dernierCalcul()) }} } · page {{ numero() + 1 }} sur {{ pages() }}</span>
+        <div class="boutons">
+          <button class="icone" type="button" aria-label="Page précédente" [disabled]="numero() <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+          <button class="icone" type="button" aria-label="Page suivante" [disabled]="numero() + 1 >= pages()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+        </div>
+      </div>
+    } @else if (donnees()!.length) {
+      <p class="vide">Aucun étudiant ne correspond à ces critères.</p>
+    } @else {
+      <p class="vide">Aucun indicateur n'a encore été calculé pour ce semestre{{ etudiant() ? ' et cet étudiant' : '' }}. Lancez le calcul avec le bouton « Calculer ».</p>
+    }
+  </section>
+}

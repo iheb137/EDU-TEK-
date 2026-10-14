@@ -2,6 +2,7 @@
 
 Utilisation :
     python -m app.train --source synthetic --etudiants 5000 --graine 42
+    python -m app.train --source plan --etudiants 5000
     python -m app.train --source csv --fichier data/export.csv
 """
 from __future__ import annotations
@@ -24,6 +25,7 @@ from .dataset import Dataset, separer
 from .features import BORNES, FEATURES, N_FEAT
 from .metrics import evaluer, probabilite_regles
 from .model import ARCHITECTURE, RisqueGRU
+from .simulateur_plan import generer as generer_plan
 from .synthetic import generer
 
 TYPE_MODELE = "DEEP_LEARNING"
@@ -31,7 +33,7 @@ TYPE_MODELE = "DEEP_LEARNING"
 
 @dataclass
 class Config:
-    source: str = "synthetic"          # "synthetic" ou "csv"
+    source: str = "synthetic"          # "synthetic", "plan" (simulateur du plan d'etudes) ou "csv"
     etudiants: int = 5000              # taille du jeu synthetique
     fichier: Optional[str] = None      # CSV pour source = "csv"
     graine: int = 42
@@ -83,6 +85,8 @@ def _temperature(logits: np.ndarray, y: np.ndarray) -> float:
 def _charger(cfg: Config) -> Dataset:
     if cfg.source == "synthetic":
         return generer(cfg.etudiants, cfg.graine)
+    if cfg.source == "plan":
+        return generer_plan(cfg.etudiants, cfg.graine)
     if cfg.source == "csv":
         if not cfg.fichier:
             raise ValueError("source csv : precisez le fichier")
@@ -184,7 +188,7 @@ def entrainer(cfg: Config, journal: Callable[[str], None] = print) -> Dict:
 
 def main() -> None:
     p = argparse.ArgumentParser(description="Entraine un modele de risque d'echec")
-    p.add_argument("--source", choices=["synthetic", "csv"], default="synthetic")
+    p.add_argument("--source", choices=["synthetic", "plan", "csv"], default="synthetic")
     p.add_argument("--etudiants", type=int, default=5000)
     p.add_argument("--fichier")
     p.add_argument("--graine", type=int, default=42)

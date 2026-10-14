@@ -1,0 +1,169 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Enseignement</p>
+    <h1>Mes pointages</h1>
+    <p class="intro">Déclarez les séances que vous avez assurées. Chaque pointage est vérifié par le service financier puis repris dans votre état de paiement mensuel. Un pointage reste modifiable tant qu'il est en attente.</p>
+  </div>
+  <div class="boutons">
+    <select class="champ" aria-label="Filtrer par mois" [value]="periode()" (change)="choisirPeriode($any($event.target).value)">
+      <option value="">Tous les mois</option>
+      @for (p of periodes(); track p) { <option [value]="p">{{ periodeFr(p) }}</option> }
+    </select>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="ligne rise" style="animation-delay: .1s">
+  <div class="onglets" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" [class.actif]="onglet() === 'apointer'" [attr.aria-selected]="onglet() === 'apointer'" (click)="onglet.set('apointer')">Séances à pointer <span class="compte">{{ aPointer().length }}</span></button>
+    <button type="button" role="tab" [class.actif]="onglet() === 'pointages'" [attr.aria-selected]="onglet() === 'pointages'" (click)="onglet.set('pointages')">Pointages déclarés <span class="compte">{{ pointagesVisibles().length }}</span></button>
+  </div>
+  @if (!chargement() && pointagesVisibles().length) {
+    <span class="note" style="margin-top:22px">{{ totaux().enAttente }} en attente · {{ totaux().anomalies }} en anomalie · {{ dureeFr(totaux().minutesRetenues) }} retenues</span>
+  }
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement()) {
+    <p class="vide">Chargement…</p>
+  } @else if (onglet() === 'apointer') {
+    @if (aPointer().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Date</th><th>Horaire</th><th>Enseignement</th><th>Salle</th><th class="droite">Durée prévue</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (s of aPointer(); track s.id) {
+              <tr>
+                <td class="chiffre"><span class="nom">{{ dateFr(s.date) }}</span></td>
+                <td class="chiffre">{{ heure(s.heureDebut) }} – {{ heure(s.heureFin) }}</td>
+                <td>{{ s.libelle }}</td>
+                <td class="gris">{{ s.salle }}</td>
+                <td class="droite chiffre">{{ dureeFr(s.minutes) }}</td>
+                <td><div class="actions"><button class="mini" type="button" [attr.aria-label]="'Pointer la séance du ' + dateFr(s.date) + ' : ' + s.libelle" (click)="ouvrirPointage(s)"><app-icon nom="checkmark" [taille]="16" />Pointer</button></div></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (!erreur()) {
+      <p class="vide">Toutes vos séances passées{{ periode() ? ' de ' + periodeFr(periode()).toLowerCase() : '' }} sont pointées. Les prochaines apparaîtront ici une fois assurées.</p>
+    }
+  } @else {
+    @if (pointagesVisibles().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Séance</th><th>Enseignement</th><th class="droite">Déclaré</th><th class="droite">Retenu</th><th>Statut</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (p of pointagesVisibles(); track p.id) {
+              <tr>
+                <td class="chiffre"><span class="nom">{{ dateFr(p.date) }}</span><span class="sous">{{ heure(p.heureDebut) }} – {{ heure(p.heureFin) }}</span></td>
+                <td>{{ p.matiereNom }}<span class="sous">{{ p.classeNom }}</span></td>
+                <td class="droite chiffre">{{ dureeFr(p.minutesDeclarees) }}@if (p.minutesDeclarees !== p.minutesPlanifiees) { <span class="sous">prévu {{ dureeFr(p.minutesPlanifiees) }}</span> }</td>
+                <td class="droite chiffre">{{ p.minutesValidees !== null && p.minutesValidees !== undefined ? dureeFr(p.minutesValidees) : '—' }}</td>
+                <td>
+                  <span class="puce" [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span>
+                  @if (p.commentaireFinance) { <span class="sous" [title]="p.commentaireFinance">{{ p.commentaireFinance }}</span> }
+                </td>
+                <td>
+                  <div class="actions">
+                    <button class="icone" type="button" title="Détail" [attr.aria-label]="'Détail du pointage du ' + dateFr(p.date)" (click)="ouvrir('detail', p)"><app-icon nom="information-circle" [taille]="19" /></button>
+                    @if (p.statut === 'EN_ATTENTE') {
+                      <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier le pointage du ' + dateFr(p.date)" (click)="ouvrir('modifier', p)"><app-icon nom="pencil" [taille]="19" /></button>
+                      <button class="icone danger" type="button" title="Retirer le pointage" [attr.aria-label]="'Retirer le pointage du ' + dateFr(p.date)" (click)="ouvrir('retirer', p)"><app-icon nom="trash" [taille]="19" /></button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else if (!erreur()) {
+      <p class="vide">Aucun pointage{{ periode() ? ' pour ' + periodeFr(periode()).toLowerCase() : '' }}. Pointez vos séances depuis l'onglet « Séances à pointer ».</p>
+    }
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('pointer') {
+    <app-modal titre="Pointer une séance" [largeur]="540" (fermer)="fermer()">
+      @if (seanceCible(); as s) {
+        <div class="recap"><strong>{{ s.libelle }}</strong><br>{{ dateFr(s.date) }}, {{ heure(s.heureDebut) }} – {{ heure(s.heureFin) }}@if (s.salle) { · salle {{ s.salle }} } · durée prévue {{ dureeFr(s.minutes) }}</div>
+      }
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="pointer()" novalidate>
+        <div class="champ-f">
+          <label for="pt-min">Durée effectuée (minutes)</label>
+          <input id="pt-min" type="number" min="1" max="720" step="5" formControlName="minutes">
+          @if (formulaire.controls.minutes.touched && formulaire.controls.minutes.invalid) { <span class="erreur-champ">Entre 1 et 720 minutes.</span> }
+        </div>
+        <div class="champ-f" style="justify-content:flex-end"><span class="aide">Laissez la durée prévue si la séance s'est déroulée normalement.</span></div>
+        <div class="champ-f large">
+          <label for="pt-com">Commentaire (facultatif)</label>
+          <textarea id="pt-com" formControlName="commentaire" placeholder="Ex. séance écourtée, rattrapage…"></textarea>
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="pointer()"><app-icon nom="checkmark" [taille]="18" />{{ enCours() ? 'Enregistrement…' : 'Pointer la séance' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('modifier') {
+    <app-modal titre="Modifier le pointage" [largeur]="540" (fermer)="fermer()">
+      @if (pointageCible(); as p) {
+        <div class="recap"><strong>{{ p.matiereNom }}</strong> · {{ p.classeNom }}<br>{{ dateFr(p.date) }}, {{ heure(p.heureDebut) }} – {{ heure(p.heureFin) }} · durée prévue {{ dureeFr(p.minutesPlanifiees) }}</div>
+      }
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="modifier()" novalidate>
+        <div class="champ-f">
+          <label for="pm-min">Durée effectuée (minutes)</label>
+          <input id="pm-min" type="number" min="1" max="720" step="5" formControlName="minutes">
+          @if (formulaire.controls.minutes.touched && formulaire.controls.minutes.invalid) { <span class="erreur-champ">Entre 1 et 720 minutes.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="pm-com">Commentaire (facultatif)</label>
+          <textarea id="pm-com" formControlName="commentaire"></textarea>
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="modifier()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('retirer') {
+    <app-modal titre="Retirer le pointage" [largeur]="500" (fermer)="fermer()">
+      <div class="recap"><strong>{{ pointageCible()?.matiereNom }}</strong> · {{ pointageCible()?.classeNom }}<br>{{ dateFr(pointageCible()?.date) }} · {{ dureeFr(pointageCible()?.minutesDeclarees) }} déclarées</div>
+      <p class="gris" style="margin:0;font-size:14px;line-height:1.55">Le pointage sera supprimé et la séance redeviendra « à pointer ».</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="retirer()">{{ enCours() ? 'Suppression…' : 'Retirer le pointage' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('detail') {
+    <app-modal titre="Détail du pointage" [largeur]="540" (fermer)="fermer()">
+      @if (pointageCible(); as p) {
+        <dl class="details">
+          <dt>Séance</dt><dd>{{ p.matiereNom }} · {{ p.classeNom }}<br>{{ dateFr(p.date) }}, {{ heure(p.heureDebut) }} – {{ heure(p.heureFin) }}</dd>
+          <dt>Statut</dt><dd><span [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span></dd>
+          <dt>Durée prévue</dt><dd>{{ dureeFr(p.minutesPlanifiees) }}</dd>
+          <dt>Durée déclarée</dt><dd>{{ dureeFr(p.minutesDeclarees) }}</dd>
+          <dt>Durée retenue</dt><dd>{{ p.minutesValidees !== null && p.minutesValidees !== undefined ? dureeFr(p.minutesValidees) : 'Non encore traitée' }}</dd>
+          <dt>Votre commentaire</dt><dd>{{ p.commentaire || '—' }}</dd>
+          <dt>Avis de la finance</dt><dd>{{ p.commentaireFinance || '—' }}</dd>
+          <dt>Pointé le</dt><dd>{{ dateHeureFr(p.datePointage) }}</dd>
+          @if (p.dateValidation) { <dt>Traité le</dt><dd>{{ dateHeureFr(p.dateValidation) }}</dd> }
+        </dl>
+      }
+      <div class="pied"><button class="btn indigo" type="button" (click)="fermer()">Fermer</button></div>
+    </app-modal>
+  }
+}

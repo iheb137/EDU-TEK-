@@ -1,0 +1,104 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Référentiel pédagogique</p>
+    <h1>Classes</h1>
+    <p class="intro">Groupes d'étudiants d'une formation pour une année universitaire. Ouvrez une classe pour voir ses étudiants et ses enseignements.</p>
+  </div>
+  @if (peutEcrire) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="nouvelle()"><app-icon nom="add" [taille]="18" />Nouvelle classe</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .06s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Rechercher par code ou nom" aria-label="Rechercher une classe" [value]="recherche()" (input)="recherche.set($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Filtrer par formation" (change)="filtrer($any($event.target).value)">
+    <option value="">Toutes les formations</option>
+    @for (f of formationsTriees(); track f.id) { <option [value]="f.id">{{ f.code }}</option> }
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .12s">
+  @if (chargement() && !classes().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (lignes().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Classe</th><th>Code</th><th>Année universitaire</th><th>Formation</th><th class="num">Étudiants</th><th class="num">Enseignements</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (c of lignes(); track c.id) {
+            <tr>
+              <td><a class="lien" [routerLink]="['/classes', c.id]">{{ c.nom }}</a></td>
+              <td><span class="code">{{ c.code }}</span></td>
+              <td class="gris">{{ c.anneeUniversitaire || '—' }}</td>
+              <td>@if (c.formation) { <a class="lien-doux" [routerLink]="['/formations', c.formationId]">{{ c.formation.code }}</a> } @else { <span class="gris">—</span> }</td>
+              <td class="num">{{ c.effectif }}</td>
+              <td class="num">{{ c.nbEnseignements }}</td>
+              <td>
+                <div class="actions">
+                  <a class="icone" title="Fiche de la classe" [attr.aria-label]="'Fiche de la classe ' + c.nom" [routerLink]="['/classes', c.id]"><app-icon nom="open" [taille]="19" /></a>
+                  @if (peutEcrire) {
+                    <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier la classe ' + c.nom" (click)="modifier(c)"><app-icon nom="pencil" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer la classe ' + c.nom" (click)="demanderSuppression(c)"><app-icon nom="trash" [taille]="19" /></button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination"><span>{{ lignes().length }} classe{{ lignes().length > 1 ? 's' : '' }}</span></div>
+  } @else {
+    <p class="vide">{{ recherche() || filtreFormation() ? 'Aucune classe ne correspond à ces critères.' : 'Aucune classe n\'est encore définie.' }}</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('editer') {
+    <app-modal [titre]="cible() ? 'Modifier la classe' : 'Nouvelle classe'" [largeur]="580" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f">
+          <label for="cl-nom">Nom</label>
+          <input id="cl-nom" formControlName="nom" placeholder="ex. GLSI 5 D" autocomplete="off">
+          @if (formulaire.controls.nom.touched && formulaire.controls.nom.invalid) { <span class="erreur-champ">Nom obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="cl-code">Code</label>
+          <input id="cl-code" formControlName="code" placeholder="ex. GLSI5D" autocomplete="off">
+          @if (formulaire.controls.code.touched && formulaire.controls.code.invalid) { <span class="erreur-champ">Code obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="cl-form">Formation</label>
+          <select id="cl-form" formControlName="formationId">
+            <option [ngValue]="null" disabled>Choisir une formation</option>
+            @for (f of formationsTriees(); track f.id) { <option [ngValue]="f.id">{{ f.code }} · {{ f.nom }}</option> }
+          </select>
+          @if (formulaire.controls.formationId.touched && formulaire.controls.formationId.invalid) { <span class="erreur-champ">Choisissez une formation.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="cl-annee">Année universitaire</label>
+          <input id="cl-annee" formControlName="anneeUniversitaire" placeholder="2026-2027" autocomplete="off">
+          @if (formulaire.controls.anneeUniversitaire.touched && formulaire.controls.anneeUniversitaire.invalid) { <span class="erreur-champ">Format attendu : 2026-2027.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-confirmation titre="Supprimer la classe" [message]="'Supprimer la classe « ' + cible()?.nom + ' » ?'"
+      detail="La suppression est refusée tant que des étudiants ou des enseignements y sont rattachés."
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="supprimer()" (fermer)="fermer()" />
+  }
+}

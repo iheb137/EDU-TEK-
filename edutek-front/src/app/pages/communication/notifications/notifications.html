@@ -1,0 +1,61 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Communication</p>
+    <h1>Notifications</h1>
+    <p class="intro">Messages reçus, notes publiées, annonces de l'établissement : retrouvez ici tous les avis qui vous ont été adressés.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn indigo" type="button" [disabled]="enCours() || !nonLues()" (click)="toutLire()"><app-icon nom="checkmark-done" [taille]="18" />{{ enCours() ? 'Enregistrement…' : 'Tout marquer comme lu' }}</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <div class="segments" role="group" aria-label="Filtrer les notifications">
+    <button type="button" [class.actif]="filtre() === 'toutes'" [attr.aria-pressed]="filtre() === 'toutes'" (click)="filtrer('toutes')">Toutes <span>{{ toutes()?.length ?? 0 }}</span></button>
+    <button type="button" [class.actif]="filtre() === 'non-lues'" [attr.aria-pressed]="filtre() === 'non-lues'" (click)="filtrer('non-lues')">Non lues <span>{{ nonLues() }}</span></button>
+  </div>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (toutes() === null) {
+    <p class="vide">Chargement…</p>
+  } @else if (visibles().length) {
+    <ul class="liste">
+      @for (n of visibles(); track n.id) {
+        <li [class.non-lue]="!n.lue">
+          <span class="pictogramme" aria-hidden="true"><app-icon [nom]="versMessagerie(n) ? 'mail' : 'notifications'" [taille]="19" /></span>
+          <div class="texte">
+            <p class="titre">@if (!n.lue) { <span class="visuel-cache">Non lue : </span> }{{ n.titre }}</p>
+            <p class="contenu">{{ n.contenu }}</p>
+            <p class="date">{{ date(n.dateEnvoi) }}
+              @if (versMessagerie(n)) { · <a routerLink="/messagerie" (click)="marquer(n)">Ouvrir la messagerie</a> }
+            </p>
+          </div>
+          <div class="actions">
+            @if (!n.lue) {
+              <button class="icone" type="button" title="Marquer comme lue" [attr.aria-label]="'Marquer comme lue : ' + n.titre" [disabled]="traitement() === n.id" (click)="marquer(n)"><app-icon nom="checkmark" [taille]="20" /></button>
+            } @else {
+              <span class="puce gris">Lue</span>
+            }
+          </div>
+        </li>
+      }
+    </ul>
+    @if (pages() > 1) {
+      <div class="pagination">
+        <span>{{ filtrees().length }} notification{{ filtrees().length > 1 ? 's' : '' }} · page {{ numero() + 1 }} sur {{ pages() }}</span>
+        <div class="boutons">
+          <button class="icone" type="button" aria-label="Page précédente" [disabled]="numero() <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+          <button class="icone" type="button" aria-label="Page suivante" [disabled]="numero() + 1 >= pages()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+        </div>
+      </div>
+    }
+  } @else if (filtre() === 'non-lues') {
+    <p class="vide">Vous avez lu toutes vos notifications.</p>
+  } @else {
+    <p class="vide">Aucune notification pour le moment. Vous serez averti ici des nouveaux messages, des notes publiées et des annonces.</p>
+  }
+</section>

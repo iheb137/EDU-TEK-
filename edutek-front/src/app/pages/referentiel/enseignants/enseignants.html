@@ -1,0 +1,105 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Référentiel pédagogique</p>
+    <h1>Enseignants</h1>
+    <p class="intro">Corps enseignant de l'établissement. Un compte créé ici reçoit un mot de passe temporaire ; les enseignements se répartissent ensuite depuis l'écran Enseignements.</p>
+  </div>
+  @if (peutEcrire) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="nouveau()"><app-icon nom="person-add" [taille]="18" />Nouvel enseignant</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .06s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Nom, e-mail, matricule ou spécialité" aria-label="Rechercher un enseignant" [value]="recherche()" (input)="chercher($any($event.target).value)">
+  </div>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .12s">
+  @if (chargement() && !enseignants().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (lignes().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Enseignant</th><th>Matricule</th><th>Spécialité</th><th>Grade</th><th class="num">Enseignements</th><th>État</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (e of lignes(); track e.id) {
+            <tr>
+              <td><span class="nom">{{ e.nom }} {{ e.prenom }}</span><br><span class="gris">{{ e.email }}</span></td>
+              <td><span class="code">{{ e.matricule }}</span></td>
+              <td>{{ e.specialite || '—' }}</td>
+              <td class="gris">{{ e.grade || '—' }}</td>
+              <td class="num">
+                @if (e.nbEnseignements) { <a class="lien-doux" routerLink="/enseignements" [queryParams]="{ enseignant: e.id }">{{ e.nbEnseignements }} · {{ e.volume }} h</a> } @else { <span class="gris">0</span> }
+              </td>
+              <td><span class="puce" [class.vert]="e.actif" [class.gris]="!e.actif">{{ e.actif ? 'Actif' : 'Inactif' }}</span></td>
+              <td>
+                @if (peutEcrire) {
+                  <div class="actions">
+                    <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier ' + e.prenom + ' ' + e.nom" (click)="modifier(e)"><app-icon nom="pencil" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer ' + e.prenom + ' ' + e.nom" (click)="demanderSuppression(e)"><app-icon nom="trash" [taille]="19" /></button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span>{{ total() }} enseignant{{ total() > 1 ? 's' : '' }} · page {{ numero() + 1 }} sur {{ pages() }}</span>
+      <div class="boutons">
+        <button class="icone" type="button" aria-label="Page précédente" [disabled]="numero() <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+        <button class="icone" type="button" aria-label="Page suivante" [disabled]="numero() + 1 >= pages()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+      </div>
+    </div>
+  } @else {
+    <p class="vide">{{ recherche() ? 'Aucun enseignant ne correspond à cette recherche.' : 'Aucun enseignant n\'est encore enregistré.' }}</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('editer') {
+    <app-modal [titre]="cible() ? 'Modifier l\'enseignant' : 'Nouvel enseignant'" [largeur]="640" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f"><label for="en-prenom">Prénom</label><input id="en-prenom" formControlName="prenom" autocomplete="off">@if (formulaire.controls.prenom.touched && formulaire.controls.prenom.invalid) { <span class="erreur-champ">Obligatoire.</span> }</div>
+        <div class="champ-f"><label for="en-nom">Nom</label><input id="en-nom" formControlName="nom" autocomplete="off">@if (formulaire.controls.nom.touched && formulaire.controls.nom.invalid) { <span class="erreur-champ">Obligatoire.</span> }</div>
+        <div class="champ-f large"><label for="en-mail">Adresse e-mail</label><input id="en-mail" type="email" formControlName="email" autocomplete="off">@if (formulaire.controls.email.touched && formulaire.controls.email.invalid) { <span class="erreur-champ">Adresse e-mail invalide.</span> }</div>
+        <div class="champ-f"><label for="en-mat">Matricule</label><input id="en-mat" formControlName="matricule" autocomplete="off">@if (formulaire.controls.matricule.touched && formulaire.controls.matricule.invalid) { <span class="erreur-champ">Obligatoire.</span> }</div>
+        <div class="champ-f"><label for="en-tel">Téléphone (facultatif)</label><input id="en-tel" formControlName="telephone" autocomplete="off"></div>
+        <div class="champ-f"><label for="en-spe">Spécialité (facultatif)</label><input id="en-spe" formControlName="specialite" autocomplete="off"></div>
+        <div class="champ-f"><label for="en-grade">Grade (facultatif)</label><input id="en-grade" formControlName="grade" placeholder="ex. Maître assistant" autocomplete="off"></div>
+        @if (!cible()) {
+          <div class="champ-f large">
+            <label for="en-mdp">Mot de passe temporaire</label>
+            <div class="rang">
+              <input id="en-mdp" [type]="mdpVisible() ? 'text' : 'password'" formControlName="motDePasse" autocomplete="new-password">
+              <button class="icone" type="button" title="Afficher ou masquer" aria-label="Afficher ou masquer le mot de passe" (click)="mdpVisible.set(!mdpVisible())"><app-icon [nom]="mdpVisible() ? 'eye-off' : 'eye'" [taille]="19" /></button>
+              <button class="icone" type="button" title="Générer un autre mot de passe" aria-label="Générer un autre mot de passe" (click)="regenerer()"><app-icon nom="refresh" [taille]="19" /></button>
+            </div>
+            @if (formulaire.controls.motDePasse.touched && mdpInvalide()) { <span class="erreur-champ">8 caractères minimum.</span> }
+          </div>
+        }
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : cible() ? 'Enregistrer' : 'Créer l\'enseignant' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('secret') {
+    <app-secret [email]="secret().email" [motDePasse]="secret().motDePasse" (fermer)="fermer()" />
+  }
+  @case ('supprimer') {
+    <app-confirmation titre="Supprimer l'enseignant" [message]="'Supprimer définitivement le compte de ' + cible()?.prenom + ' ' + cible()?.nom + ' (' + cible()?.matricule + ') ?'"
+      detail="Le compte de connexion est supprimé avec le dossier. La suppression est refusée tant que des enseignements lui sont affectés."
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="supprimer()" (fermer)="fermer()" />
+  }
+}

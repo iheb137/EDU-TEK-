@@ -59,7 +59,7 @@ Reponse :
 | `GET /model` | Modele actif (meme structure que `modele`). 503 si aucun modele actif. |
 | `GET /models` | Tous les modeles du registre (version, provenance des donnees, AUC test, actif). |
 | `POST /activate` | `{"nom": "...", "version": "..."}` : active un modele (404 inconnu, 409 incompatible). |
-| `POST /train` | Entraine un nouveau modele SANS l'activer. Corps : `source` (`synthetic` ou `csv`), `etudiants`, `fichier` (CSV du dossier `data/`), `graine`, `epoques`. Reponse : `modele` + `metriques` de test. Appel synchrone (quelques dizaines de secondes). |
+| `POST /train` | Entraine un nouveau modele SANS l'activer. Corps : `source` (`synthetic`, `plan` ou `csv`), `etudiants`, `fichier` (CSV du dossier `data/`), `graine`, `epoques`. Reponse : `modele` + `metriques` de test. Appel synchrone (quelques dizaines de secondes). |
 
 ## Erreurs
 

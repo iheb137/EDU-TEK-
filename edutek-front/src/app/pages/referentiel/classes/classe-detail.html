@@ -1,0 +1,80 @@
+<a class="retour" routerLink="/classes"><app-icon nom="arrow-back" [taille]="16" />Toutes les classes</a>
+
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Classe{{ classe() ? ' · ' + classe()!.code : '' }}</p>
+    <h1>{{ classe()?.nom ?? 'Classe' }}</h1>
+    <p class="intro">
+      @if (classe(); as c) {
+        {{ formation() ? formation()!.nom : 'Formation inconnue' }}{{ c.anneeUniversitaire ? ' · année ' + c.anneeUniversitaire : '' }}
+      } @else { Étudiants et enseignements de la classe. }
+    </p>
+  </div>
+  @if (peutEcrire && classe()) {
+    <div class="boutons">
+      <a class="btn clair" routerLink="/etudiants" [queryParams]="{ classe: id, creer: 1 }"><app-icon nom="person-add" [taille]="18" />Ajouter un étudiant</a>
+      <a class="btn indigo" routerLink="/enseignements" [queryParams]="{ classe: id, creer: 1 }"><app-icon nom="add" [taille]="18" />Ajouter un enseignement</a>
+    </div>
+  }
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement() && !classe()) {
+  <section class="carte rise" style="margin-top:22px"><p class="vide">Chargement…</p></section>
+} @else if (classe()) {
+  <div class="chiffres rise" style="animation-delay: .06s">
+    <div class="chiffre"><strong>{{ etudiants().length }}</strong><span>étudiant{{ etudiants().length > 1 ? 's' : '' }}</span></div>
+    <div class="chiffre"><strong>{{ enseignements().length }}</strong><span>enseignement{{ enseignements().length > 1 ? 's' : '' }}</span></div>
+    <div class="chiffre"><strong>{{ volume() }} h</strong><span>volume horaire total</span></div>
+  </div>
+
+  <section class="carte tableau compact rise" style="animation-delay: .12s; margin-top: 22px" aria-labelledby="t-ens">
+    <div class="bloc-tete" style="padding: 18px 24px 6px; margin: 0">
+      <h2 id="t-ens">Enseignements</h2>
+      <a class="lien-doux" routerLink="/enseignements" [queryParams]="{ classe: id }">Gérer les enseignements</a>
+    </div>
+    @if (enseignements().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Matière</th><th>Enseignant</th><th>Semestre</th><th>Groupe</th><th class="num">Volume</th></tr></thead>
+          <tbody>
+            @for (e of enseignements(); track e.id) {
+              <tr>
+                <td><span class="nom">{{ e.matiere?.nom ?? '—' }}</span><br><span class="note">{{ e.matiere?.code }}</span></td>
+                <td>{{ e.enseignant ? e.enseignant.prenom + ' ' + e.enseignant.nom : '—' }}</td>
+                <td class="gris">{{ e.semestre?.nom ?? '—' }}</td>
+                <td>{{ e.groupe || '—' }}</td>
+                <td class="num">{{ e.volumeHoraire != null ? e.volumeHoraire + ' h' : '—' }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else { <p class="vide">Aucun enseignement n'est encore affecté à cette classe.</p> }
+  </section>
+
+  <section class="carte tableau compact rise" style="animation-delay: .18s" aria-labelledby="t-etu">
+    <div class="bloc-tete" style="padding: 18px 24px 6px; margin: 0">
+      <h2 id="t-etu">Étudiants</h2>
+      <a class="lien-doux" routerLink="/etudiants" [queryParams]="{ classe: id }">Ouvrir dans la liste des étudiants</a>
+    </div>
+    @if (etudiants().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Étudiant</th><th>Matricule</th><th>Niveau</th><th>État</th></tr></thead>
+          <tbody>
+            @for (e of etudiants(); track e.id) {
+              <tr>
+                <td><a class="lien" [routerLink]="['/etudiants', e.id]">{{ e.nom }} {{ e.prenom }}</a><br><span class="gris">{{ e.email }}</span></td>
+                <td><span class="code">{{ e.matricule }}</span></td>
+                <td class="gris">{{ e.niveau || '—' }}</td>
+                <td><span class="puce" [class.vert]="e.actif" [class.gris]="!e.actif">{{ e.actif ? 'Actif' : 'Inactif' }}</span></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else { <p class="vide">Aucun étudiant n'est rattaché à cette classe.</p> }
+  </section>
+}

@@ -1,0 +1,8 @@
+.page { min-height: 100vh; display: flex; flex-direction: column; }
+.contenu { flex: 1; width: 100%; max-width: 1320px; margin: 0 auto; padding: 36px 24px 56px; }
+
+.progression {
+  position: fixed; top: 0; left: 0; right: 0; height: 3px; z-index: 50; transform: scaleX(0); transform-origin: left; opacity: 0;
+  background: linear-gradient(90deg, var(--teal), var(--sky), var(--indigo)); transition: transform .6s cubic-bezier(.2, .8, .2, 1), opacity .3s .3s;
+  &.active { opacity: 1; transform: scaleX(.85); transition: transform 2s cubic-bezier(.1, .7, .2, 1), opacity .1s; }
+}

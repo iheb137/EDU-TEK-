@@ -53,8 +53,9 @@ public class AuthController {
         String email = request.getEmail() == null ? "" : request.getEmail().trim();
         String ip = http.getRemoteAddr();
         verifierNonBloque(PORTEE_LOGIN, ip, email);
+        org.springframework.security.core.Authentication authentifie;
         try {
-            authenticationManager.authenticate(
+            authentifie = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(email, request.getMotDePasse()));
         } catch (CredentialsExpiredException e) {
             // Mot de passe correct mais temporaire : ce n'est pas un echec d'authentification.
@@ -76,6 +77,12 @@ public class AuthController {
         response.setEmail(utilisateur.getEmail());
         response.setNom(utilisateur.getNom());
         response.setPrenom(utilisateur.getPrenom());
+        response.setRoles(authentifie.getAuthorities().stream()
+                .map(a -> a.getAuthority())
+                .filter(a -> a != null && a.startsWith("ROLE_"))
+                .map(a -> a.substring("ROLE_".length()))
+                .sorted()
+                .toList());
         return ResponseEntity.ok(response);
     }
 

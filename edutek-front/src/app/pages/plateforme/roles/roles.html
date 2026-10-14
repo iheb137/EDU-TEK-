@@ -1,0 +1,182 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Administration</p>
+    <h1>Rôles et permissions</h1>
+    <p class="intro">Définissez les permissions fines accordées à chaque rôle. Les rôles système sont fournis par Edu-Tek et ne peuvent pas être supprimés ; vous pouvez créer des rôles complémentaires.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" (click)="ouvrirPermission()"><app-icon nom="key" [taille]="18" />Nouvelle permission</button>
+    <button class="btn indigo" type="button" (click)="ouvrirRole()"><app-icon nom="add" [taille]="18" />Nouveau rôle</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement() && !roles()) {
+  <section class="carte rise" style="margin-top:22px"><p class="vide">Chargement…</p></section>
+} @else if (roles()) {
+  <div class="grille">
+    <section class="carte liste-roles rise" style="animation-delay: .1s" aria-label="Rôles">
+      <h2>Rôles <span class="note">{{ roles()!.length }}</span></h2>
+      <ul>
+        @for (r of rolesTries(); track r.id) {
+          <li [class.choisi]="r.id === selection()">
+            <button class="role" type="button" [attr.aria-pressed]="r.id === selection()" (click)="choisir(r.id)">
+              <span class="nom-role">{{ r.nom }}</span>
+              <span class="details">
+                @if (libelleRole(r.nom); as l) { {{ l }} · }
+                {{ r.permissions.length }} permission{{ r.permissions.length > 1 ? 's' : '' }}
+              </span>
+            </button>
+            @if (r.systeme) {
+              <span class="puce gris" title="Rôle fourni par Edu-Tek : suppression impossible"><app-icon nom="lock-closed" [taille]="12" />Système</span>
+            } @else {
+              <button class="icone danger" type="button" title="Supprimer le rôle" [attr.aria-label]="'Supprimer le rôle ' + r.nom" (click)="demanderSuppressionRole(r)"><app-icon nom="trash" [taille]="18" /></button>
+            }
+          </li>
+        }
+      </ul>
+    </section>
+
+    <section class="carte attribution rise" style="animation-delay: .16s" aria-label="Permissions du rôle">
+      @if (roleChoisi(); as r) {
+        <div class="ligne">
+          <div>
+            <p class="surtitre petit">Permissions du rôle</p>
+            <h2>{{ r.nom }} @if (r.systeme) { <span class="puce gris">Système</span> }</h2>
+          </div>
+          @if (permissions()?.length) {
+            <div class="boutons">
+              <button class="lien-btn" type="button" (click)="toutCocher(true)">Tout cocher</button>
+              <button class="lien-btn" type="button" (click)="toutCocher(false)">Tout décocher</button>
+            </div>
+          }
+        </div>
+        @if (permissions()?.length) {
+          <div class="cases">
+            @for (p of permissions(); track p.id) {
+              <label class="case" [class.cochee]="cochees().includes(p.code)">
+                <input type="checkbox" [checked]="cochees().includes(p.code)" (change)="cocher(p.code, $any($event.target).checked)">
+                <span><code>{{ p.code }}</code>@if (p.description) { <span class="desc">{{ p.description }}</span> }</span>
+              </label>
+            }
+          </div>
+          @if (erreurAttribution()) { <p class="bandeau" role="alert">{{ erreurAttribution() }}</p> }
+          <div class="pied">
+            @if (modifie()) { <span class="note modifs">Modifications non enregistrées</span> }
+            <button class="btn clair" type="button" [disabled]="!modifie() || enregistrement()" (click)="annulerAttribution()">Annuler</button>
+            <button class="btn indigo" type="button" [disabled]="!modifie() || enregistrement()" (click)="enregistrerAttribution()">{{ enregistrement() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+          </div>
+        } @else {
+          <p class="vide sans-marge">Aucune permission n'est encore définie. Créez-en avec « Nouvelle permission » pour pouvoir les attribuer aux rôles.</p>
+        }
+      } @else {
+        <p class="vide sans-marge">Choisissez un rôle pour voir ses permissions.</p>
+      }
+    </section>
+  </div>
+
+  <section class="carte tableau rise" style="animation-delay: .22s">
+    <div class="tete-carte">
+      <h2>Catalogue des permissions</h2>
+      <span class="note">{{ permissions()?.length ?? 0 }} permission{{ (permissions()?.length ?? 0) > 1 ? 's' : '' }}</span>
+    </div>
+    @if (permissions()?.length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Code</th><th>Description</th><th>Attribuée à</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (p of permissions(); track p.id) {
+              @let u = usages().get(p.code) ?? [];
+              <tr>
+                <td><code>{{ p.code }}</code></td>
+                <td class="gris">{{ p.description || '—' }}</td>
+                <td>@if (u.length) { <div class="puces">@for (n of u; track n) { <span class="puce">{{ n }}</span> }</div> } @else { <span class="note">Aucun rôle</span> }</td>
+                <td>
+                  <div class="actions">
+                    <button class="icone danger" type="button" [title]="u.length ? 'Retirez d\'abord cette permission des rôles qui l\'utilisent' : 'Supprimer la permission'" [attr.aria-label]="'Supprimer la permission ' + p.code" [disabled]="u.length > 0" (click)="demanderSuppressionPermission(p)"><app-icon nom="trash" [taille]="18" /></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="vide">Le catalogue est vide. Une permission est un droit nommé (par exemple <code>EXPORT_NOTES</code>) que vous attribuez ensuite aux rôles.</p>
+    }
+  </section>
+}
+
+@switch (fenetre()) {
+  @case ('role') {
+    <app-modal titre="Nouveau rôle" [largeur]="560" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formRole" (ngSubmit)="creerRole()" novalidate>
+        <div class="champ-f large">
+          <label for="r-nom">Nom du rôle</label>
+          <input id="r-nom" formControlName="nom" placeholder="ex. RESPONSABLE_STAGES" autocomplete="off" (input)="majuscules('role', $any($event.target).value)">
+          @if (formRole.controls.nom.touched && formRole.controls.nom.invalid) { <span class="erreur-champ">3 à 50 caractères : lettres, chiffres et tiret bas, en commençant par une lettre.</span> }
+          @else { <span class="note">Enregistré en majuscules.</span> }
+        </div>
+      </form>
+      @if (permissions()?.length) {
+        <p class="etiquette">Permissions accordées (facultatif)</p>
+        <div class="cases compactes">
+          @for (p of permissions(); track p.id) {
+            <label class="case"><input type="checkbox" [checked]="permsNouveauRole().includes(p.code)" (change)="cocherNouveau(p.code, $any($event.target).checked)"><code>{{ p.code }}</code></label>
+          }
+        </div>
+      }
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="creerRole()">{{ enCours() ? 'Création…' : 'Créer le rôle' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('permission') {
+    <app-modal titre="Nouvelle permission" [largeur]="540" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formPermission" (ngSubmit)="creerPermission()" novalidate>
+        <div class="champ-f large">
+          <label for="p-code">Code</label>
+          <input id="p-code" formControlName="code" placeholder="ex. EXPORT_NOTES" autocomplete="off" (input)="majuscules('permission', $any($event.target).value)">
+          @if (formPermission.controls.code.touched && formPermission.controls.code.invalid) { <span class="erreur-champ">3 à 60 caractères en majuscules : lettres, chiffres et tiret bas.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="p-desc">Description (facultatif)</label>
+          <input id="p-desc" formControlName="description" placeholder="ex. Exporter les relevés de notes" autocomplete="off">
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="creerPermission()">{{ enCours() ? 'Création…' : 'Créer la permission' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('supprimer-role') {
+    <app-modal titre="Supprimer le rôle" [largeur]="480" (fermer)="fermer()">
+      <p class="aide">Supprimer définitivement le rôle <strong>{{ roleCible()?.nom }}</strong> ?</p>
+      <p class="gris aide">Les comptes qui le possèdent le perdront, ainsi que les permissions qu'il leur accordait.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn danger-plein" type="button" [disabled]="enCours()" (click)="supprimerRole()">{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('supprimer-permission') {
+    <app-modal titre="Supprimer la permission" [largeur]="480" (fermer)="fermer()">
+      <p class="aide">Supprimer définitivement la permission <code>{{ permissionCible()?.code }}</code> ?</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn danger-plein" type="button" [disabled]="enCours()" (click)="supprimerPermission()">{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

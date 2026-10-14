@@ -1,0 +1,176 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Finance</p>
+    <h1>Pointages</h1>
+    <p class="intro">Vérifiez les séances déclarées par les enseignants : validez la durée déclarée, corrigez-la avec un motif ou signalez une anomalie. Seuls les pointages validés ou corrigés sont repris dans les états de paiement.</p>
+  </div>
+  @if (peutTraiter) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="ouvrirLot()"><app-icon nom="checkmark-done" [taille]="18" />Valider une période</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <input class="champ" style="width:auto" type="month" aria-label="Mois des séances" [value]="periode()" (change)="filtrer('periode', $any($event.target).value)">
+  <select class="champ" aria-label="Filtrer par statut" [value]="filtreStatut()" (change)="filtrer('statut', $any($event.target).value)">
+    <option value="">Tous les statuts</option>
+    @for (s of statuts; track s.code) { <option [value]="s.code" [selected]="s.code === filtreStatut()">{{ s.libelle }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par enseignant" [value]="enseignantId()" (change)="filtrer('enseignant', $any($event.target).value)">
+    <option [value]="0">Tous les enseignants</option>
+    @for (e of enseignants(); track e.id) { <option [value]="e.id">{{ e.prenom }} {{ e.nom }}</option> }
+  </select>
+  @if (periode()) { <button class="lien-btn" type="button" (click)="filtrer('periode', '')">Tous les mois</button> }
+  @if (!chargement() && liste().length) {
+    <span class="note">{{ totaux().nb }} pointage{{ totaux().nb > 1 ? 's' : '' }} · {{ dureeFr(totaux().declarees) }} déclarées · {{ totaux().ecarts }} écart{{ totaux().ecarts > 1 ? 's' : '' }} avec le planning</span>
+  }
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !liste().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Séance</th><th>Enseignant</th><th>Enseignement</th><th class="droite">Prévu</th><th class="droite">Déclaré</th><th class="droite">Retenu</th><th>Statut</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (p of liste(); track p.id) {
+            <tr>
+              <td class="chiffre"><span class="nom">{{ dateFr(p.date) }}</span><span class="sous">{{ heure(p.heureDebut) }} – {{ heure(p.heureFin) }}</span></td>
+              <td>{{ p.enseignantNom }}</td>
+              <td>{{ p.matiereNom }}<span class="sous">{{ p.classeNom }}</span></td>
+              <td class="droite chiffre gris">{{ dureeFr(p.minutesPlanifiees) }}</td>
+              <td class="droite chiffre" [class.danger-texte]="p.minutesDeclarees !== p.minutesPlanifiees">{{ dureeFr(p.minutesDeclarees) }}</td>
+              <td class="droite chiffre">{{ p.minutesValidees !== null && p.minutesValidees !== undefined ? dureeFr(p.minutesValidees) : '—' }}</td>
+              <td>
+                <span [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span>
+                @if (p.commentaire) { <span class="sous" [title]="p.commentaire">« {{ p.commentaire }} »</span> }
+              </td>
+              <td>
+                <div class="actions">
+                  <button class="icone" type="button" title="Détail" [attr.aria-label]="'Détail du pointage de ' + p.enseignantNom + ' du ' + dateFr(p.date)" (click)="ouvrir('detail', p)"><app-icon nom="information-circle" [taille]="19" /></button>
+                  @if (peutTraiter) {
+                    @if (p.statut !== 'VALIDE') {
+                      <button class="icone" type="button" title="Valider la durée déclarée" [attr.aria-label]="'Valider le pointage de ' + p.enseignantNom + ' du ' + dateFr(p.date)" [disabled]="traitement() === p.id" (click)="valider(p)"><app-icon nom="checkmark" [taille]="19" /></button>
+                    }
+                    <button class="icone" type="button" title="Corriger la durée" [attr.aria-label]="'Corriger le pointage de ' + p.enseignantNom + ' du ' + dateFr(p.date)" (click)="ouvrir('corriger', p)"><app-icon nom="pencil" [taille]="19" /></button>
+                    @if (p.statut !== 'ANOMALIE') {
+                      <button class="icone danger" type="button" title="Signaler une anomalie" [attr.aria-label]="'Signaler une anomalie sur le pointage de ' + p.enseignantNom + ' du ' + dateFr(p.date)" (click)="ouvrir('anomalie', p)"><app-icon nom="warning" [taille]="19" /></button>
+                    }
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide">
+      @if (filtreStatut() === 'EN_ATTENTE') { Aucun pointage en attente{{ periode() ? ' pour ' + periodeFr(periode()).toLowerCase() : '' }} : la file de traitement est vide. }
+      @else { Aucun pointage ne correspond à ces filtres. }
+    </p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('corriger') {
+    <app-modal titre="Corriger le pointage" [largeur]="560" (fermer)="fermer()">
+      @if (cible(); as p) {
+        <div class="recap"><strong>{{ p.enseignantNom }}</strong> · {{ p.matiereNom }}, {{ p.classeNom }}<br>{{ dateFr(p.date) }}, {{ heure(p.heureDebut) }} – {{ heure(p.heureFin) }} · prévu {{ dureeFr(p.minutesPlanifiees) }} · déclaré {{ dureeFr(p.minutesDeclarees) }}@if (p.commentaire) { <br>Commentaire de l'enseignant : « {{ p.commentaire }} » }</div>
+      }
+      <form class="formulaire" [formGroup]="formCorrection" (ngSubmit)="corriger()" novalidate>
+        <div class="champ-f">
+          <label for="c-min">Durée retenue (minutes)</label>
+          <input id="c-min" type="number" min="1" max="720" step="5" formControlName="minutes">
+          @if (formCorrection.controls.minutes.touched && formCorrection.controls.minutes.invalid) { <span class="erreur-champ">Entre 1 et 720 minutes.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="c-com">Motif de la correction</label>
+          <textarea id="c-com" formControlName="commentaire" placeholder="Ce motif est transmis à l'enseignant."></textarea>
+          @if (formCorrection.controls.commentaire.touched && formCorrection.controls.commentaire.invalid) { <span class="erreur-champ">Le motif est obligatoire.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="corriger()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer la correction' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('anomalie') {
+    <app-modal titre="Signaler une anomalie" [largeur]="540" (fermer)="fermer()">
+      @if (cible(); as p) {
+        <div class="recap"><strong>{{ p.enseignantNom }}</strong> · {{ p.matiereNom }}, {{ p.classeNom }}<br>{{ dateFr(p.date) }} · déclaré {{ dureeFr(p.minutesDeclarees) }}</div>
+      }
+      <form class="formulaire" [formGroup]="formAnomalie" (ngSubmit)="signaler()" novalidate>
+        <div class="champ-f large">
+          <label for="a-com">Description de l'anomalie</label>
+          <textarea id="a-com" formControlName="commentaire" placeholder="Ex. séance absente du planning, durée incohérente…"></textarea>
+          @if (formAnomalie.controls.commentaire.touched && formAnomalie.controls.commentaire.invalid) { <span class="erreur-champ">La description est obligatoire.</span> }
+          <span class="aide">Le pointage ne sera pas payé tant qu'il reste en anomalie. L'enseignant est notifié.</span>
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="signaler()"><app-icon nom="warning" [taille]="18" />{{ enCours() ? 'Enregistrement…' : 'Signaler l\'anomalie' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('lot') {
+    <app-modal titre="Valider une période" [largeur]="540" (fermer)="fermer()">
+      <p class="gris" style="margin:0 0 16px;font-size:14px;line-height:1.55">Tous les pointages en attente du mois choisi sont validés avec la durée déclarée. Les pointages corrigés ou en anomalie ne sont pas modifiés.</p>
+      <form class="formulaire" [formGroup]="formLot" (ngSubmit)="validerLot()" novalidate>
+        <div class="champ-f">
+          <label for="l-per">Mois</label>
+          <input id="l-per" type="month" formControlName="periode" (change)="compterLot()">
+          @if (formLot.controls.periode.touched && formLot.controls.periode.invalid) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="l-ens">Enseignant</label>
+          <select id="l-ens" formControlName="enseignantId" (change)="compterLot()">
+            <option [ngValue]="0">Tous les enseignants</option>
+            @for (e of enseignants(); track e.id) { <option [ngValue]="e.id">{{ e.prenom }} {{ e.nom }}</option> }
+          </select>
+        </div>
+      </form>
+      <p class="recap" style="margin:16px 0 0" role="status">
+        @if (nbLot() === null) { Comptage des pointages en attente… }
+        @else if (nbLot() === 0) { Aucun pointage en attente pour cette sélection. }
+        @else { <strong>{{ nbLot() }} pointage{{ nbLot()! > 1 ? 's' : '' }}</strong> en attente {{ nbLot()! > 1 ? 'seront validés' : 'sera validé' }}. }
+      </p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours() || !nbLot()" (click)="validerLot()"><app-icon nom="checkmark-done" [taille]="18" />{{ enCours() ? 'Validation…' : 'Valider la période' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('detail') {
+    <app-modal titre="Détail du pointage" [largeur]="560" (fermer)="fermer()">
+      @if (cible(); as p) {
+        <dl class="details">
+          <dt>Enseignant</dt><dd>{{ p.enseignantNom }}</dd>
+          <dt>Séance</dt><dd>{{ p.matiereNom }} · {{ p.classeNom }}<br>{{ dateFr(p.date) }}, {{ heure(p.heureDebut) }} – {{ heure(p.heureFin) }}</dd>
+          <dt>Statut</dt><dd><span [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span></dd>
+          <dt>Durée prévue</dt><dd>{{ dureeFr(p.minutesPlanifiees) }}</dd>
+          <dt>Durée déclarée</dt><dd>{{ dureeFr(p.minutesDeclarees) }}</dd>
+          <dt>Durée retenue</dt><dd>{{ p.minutesValidees !== null && p.minutesValidees !== undefined ? dureeFr(p.minutesValidees) : '—' }}</dd>
+          <dt>Commentaire enseignant</dt><dd>{{ p.commentaire || '—' }}</dd>
+          <dt>Commentaire finance</dt><dd>{{ p.commentaireFinance || '—' }}</dd>
+          <dt>Pointé le</dt><dd>{{ dateHeureFr(p.datePointage) }}</dd>
+          @if (p.dateValidation) { <dt>Traité le</dt><dd>{{ dateHeureFr(p.dateValidation) }}</dd> }
+        </dl>
+      }
+      <div class="pied"><button class="btn indigo" type="button" (click)="fermer()">Fermer</button></div>
+    </app-modal>
+  }
+}

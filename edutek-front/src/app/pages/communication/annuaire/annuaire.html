@@ -1,0 +1,53 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Communication</p>
+    <h1>Annuaire</h1>
+    <p class="intro">Retrouvez un enseignant, un étudiant ou un membre de l'administration de l'établissement et écrivez-lui directement depuis la messagerie.</p>
+  </div>
+</div>
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Nom ou prénom, par exemple : Jebali" aria-label="Rechercher une personne par nom ou prénom" [value]="saisie()" (input)="chercher($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Filtrer par rôle" [value]="role()" (change)="role.set($any($event.target).value)">
+    <option value="">Tous les rôles</option>
+    @for (r of roles; track r) { <option [value]="r">{{ libelleRole(r) }}</option> }
+  </select>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="carte tableau rise" style="animation-delay: .18s" aria-live="polite">
+  @if (chargement()) {
+    <p class="vide">Chargement…</p>
+  } @else if (resultats() === null) {
+    <div class="consigne">
+      <app-icon nom="people-circle" [taille]="40" />
+      <p>{{ consigne() }}</p>
+    </div>
+  } @else if (filtres().length) {
+    <ul class="personnes">
+      @for (p of filtres(); track p.id) {
+        <li>
+          <span class="avatar" aria-hidden="true"><app-icon nom="person" [taille]="20" /></span>
+          <div class="identite">
+            <span class="nom">{{ p.prenom }} {{ p.nom }}</span>
+            <div class="puces">@for (r of p.roles; track r) { <span class="puce" [class.vert]="r === 'ETUDIANT'" [class.orange]="r === 'ENSEIGNANT'">{{ libelleRole(r) }}</span> }</div>
+          </div>
+          @if (estMoi(p)) {
+            <span class="puce gris">Vous</span>
+          } @else {
+            <button class="btn clair" type="button" [attr.aria-label]="'Écrire un message à ' + p.prenom + ' ' + p.nom" (click)="ecrire(p)"><app-icon nom="create" [taille]="17" />Écrire un message</button>
+          }
+        </li>
+      }
+    </ul>
+    <p class="pied-liste">{{ filtres().length }} personne{{ filtres().length > 1 ? 's' : '' }} trouvée{{ filtres().length > 1 ? 's' : '' }}</p>
+  } @else if (resultats()!.length) {
+    <p class="vide">Aucune personne de ce rôle ne correspond à « {{ saisie().trim() }} ». Essayez « Tous les rôles ».</p>
+  } @else {
+    <p class="vide">Aucune personne ne correspond à « {{ saisie().trim() }} ». Vérifiez l'orthographe ou saisissez seulement le nom de famille.</p>
+  }
+</section>

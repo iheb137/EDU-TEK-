@@ -1,0 +1,56 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Accompagnement</p>
+    <h1>Mes recommandations</h1>
+    <p class="intro">Des conseils personnalisés établis à partir de vos résultats et de votre assiduité. N'hésitez pas à en parler avec vos enseignants ou votre responsable de formation.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" [disabled]="!nonLuesAffichees().length || traitement() !== null" (click)="toutMarquer()"><app-icon nom="checkmark-done" [taille]="18" />{{ traitement() === 'toutes' ? 'Enregistrement…' : 'Tout marquer comme lu' }}</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .08s">
+  <select class="champ" aria-label="Filtrer par semestre" (change)="filtrerSemestre($any($event.target).value)">
+    <option value="">Tous les semestres</option>
+    @for (s of semestres(); track s.id) { <option [value]="s.id">{{ s.nom }}</option> }
+  </select>
+  <div class="segments" role="group" aria-label="Filtrer par état de lecture">
+    <button type="button" [class.actif]="!nonLuesSeules()" [attr.aria-pressed]="!nonLuesSeules()" (click)="nonLuesSeules.set(false)">Toutes</button>
+    <button type="button" [class.actif]="nonLuesSeules()" [attr.aria-pressed]="nonLuesSeules()" (click)="nonLuesSeules.set(true)">Non lues ({{ nonLues() }})</button>
+  </div>
+</div>
+
+@if (chargement()) {
+  <section class="carte bloc rise"><p class="vide" style="padding:0">Chargement…</p></section>
+} @else if (!erreur()) {
+  <div class="recos">
+    @for (r of affichees(); track r.id; let i = $index) {
+      <article class="carte reco rise" [class.lue]="r.lue" [style.animation-delay]="(0.12 + i * 0.05) + 's'">
+        <span class="pastille" [style.background]="couleur(r.categorie)"><app-icon [nom]="icone(r.categorie)" [taille]="20" /></span>
+        <div class="corps">
+          <div class="meta">
+            <strong>{{ categorie(r.categorie) }}</strong>
+            <span class="note">{{ nomSemestre(r.semestreId) }} · {{ date(r.dateCreation) }}</span>
+            @if (!r.lue) { <span class="puce orange">Nouvelle</span> }
+          </div>
+          <p>{{ r.texte }}</p>
+        </div>
+        <div class="action">
+          @if (r.lue) {
+            <span class="puce gris">Lue</span>
+          } @else {
+            <button class="btn clair petit" type="button" [disabled]="traitement() !== null" (click)="marquer(r)" [attr.aria-label]="'Marquer comme lue : ' + categorie(r.categorie)"><app-icon nom="checkmark" [taille]="17" />{{ traitement() === r.id ? 'Enregistrement…' : 'Marquer comme lue' }}</button>
+          }
+        </div>
+      </article>
+    } @empty {
+      <section class="carte bloc"><p class="vide-bloc" style="padding:0">
+        @if (nonLuesSeules() && liste().length) { <strong>Toutes vos recommandations ont été lues.</strong>Affichez « Toutes » pour les relire. }
+        @else { <strong>Aucune recommandation pour le moment.</strong>Elles sont établies après chaque analyse de votre semestre. }
+      </p></section>
+    }
+  </div>
+}

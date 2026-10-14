@@ -1,0 +1,8 @@
+.generation { margin-top: 22px; padding: 20px 24px; display: flex; flex-wrap: wrap; gap: 14px 28px; align-items: flex-end; }
+.gen-texte { flex: 1 1 280px; }
+.gen-texte .note { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted); }
+.gen-champs { display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end; }
+.gen-champs .champ-f { min-width: 180px; }
+.gen-champs .btn { height: 42px; }
+.resultat { flex-basis: 100%; }
+.resultat .bandeau { margin-top: 0; }

@@ -1,0 +1,39 @@
+@switch (sujet) {
+  @case ('guide') {
+    <div class="entete rise"><div><p class="surtitre">Aide</p><h1>Guide d'utilisation</h1><p class="intro">Les principales tâches, selon votre profil.</p></div></div>
+    <div class="grille">
+      <article class="carte bloc rise"><span class="pastille"><app-icon nom="school" [taille]="20" /></span><div><strong>Responsable pédagogique</strong><p>Préparez la scolarité (formations, semestres, matières, classes, enseignements), suivez les notes et les présences, calculez et publiez les résultats, puis traitez les alertes de l'analyse du risque avec un plan d'accompagnement.</p></div></article>
+      <article class="carte bloc rise" style="animation-delay:.08s"><span class="pastille"><app-icon nom="layers" [taille]="20" /></span><div><strong>Enseignant</strong><p>Créez vos évaluations, saisissez ou importez les notes puis soumettez-les, faites l'appel de chaque séance, animez vos classes virtuelles et pointez vos heures.</p></div></article>
+      <article class="carte bloc rise" style="animation-delay:.16s"><span class="pastille"><app-icon nom="ribbon" [taille]="20" /></span><div><strong>Étudiant</strong><p>Consultez vos notes, votre bulletin et vos présences, déposez un justificatif d'absence, demandez un document administratif, proposez un stage et lisez vos recommandations.</p></div></article>
+      <article class="carte bloc rise" style="animation-delay:.24s"><span class="pastille"><app-icon nom="shield-checkmark" [taille]="20" /></span><div><strong>Administration</strong><p>Le super administrateur gère les comptes, les rôles et le journal d'audit ; les services communication, support et finances disposent chacun de leur espace de traitement.</p></div></article>
+    </div>
+    <section class="carte texte rise" style="animation-delay:.3s">
+      <h2>Première connexion</h2>
+      <p>Saisissez le code de votre établissement, votre adresse e-mail et le mot de passe reçu. Un mot de passe temporaire doit être remplacé à la première connexion (8 caractères minimum).</p>
+      <h2>Analyse du risque</h2>
+      <p>Le score de risque est une aide au repérage calculée à partir des notes, des absences et de leur évolution. Il ne constitue jamais une décision : chaque alerte est examinée par l'équipe pédagogique, qui décide des actions d'accompagnement.</p>
+    </section>
+  }
+  @case ('confidentialite') {
+    <div class="entete rise"><div><p class="surtitre">Données personnelles</p><h1>Confidentialité des données</h1><p class="intro">Comment Edu-Tek traite les informations des étudiants et du personnel.</p></div></div>
+    <section class="carte texte rise">
+      <h2>Données traitées</h2>
+      <ul><li>Identité et coordonnées professionnelles des comptes.</li><li>Scolarité : inscriptions, notes, présences, résultats.</li><li>Démarches : justificatifs, demandes de documents, stages, messages.</li></ul>
+      <h2>Finalités</h2>
+      <p>Gestion de la scolarité, suivi pédagogique et accompagnement des étudiants. L'analyse du risque sert uniquement à repérer les situations qui méritent un échange ; elle ne produit aucune décision automatique.</p>
+      <h2>Accès</h2>
+      <p>Chaque profil n'accède qu'aux données nécessaires à sa mission. Les actions sensibles (connexions, créations de comptes, modifications) sont tracées dans un journal d'audit consultable par le super administrateur.</p>
+      <h2>Vos droits</h2>
+      <p>Pour toute question sur vos données, ou pour demander leur rectification, adressez-vous à l'administration de votre établissement depuis la <a routerLink="/messagerie">messagerie</a> ou la page <a routerLink="/contact">Contact</a>.</p>
+    </section>
+  }
+  @case ('contact') {
+    <div class="entete rise"><div><p class="surtitre">Assistance</p><h1>Contact</h1><p class="intro">Les bons interlocuteurs selon votre demande.</p></div></div>
+    <div class="grille">
+      <article class="carte bloc rise"><span class="pastille"><app-icon nom="chatbubbles" [taille]="20" /></span><div><strong>Messagerie interne</strong><p>Écrivez directement à un enseignant ou à un service depuis la <a routerLink="/messagerie">messagerie</a> ; l'<a routerLink="/annuaire">annuaire</a> permet de trouver la bonne personne.</p></div></article>
+      <article class="carte bloc rise" style="animation-delay:.08s"><span class="pastille"><app-icon nom="school" [taille]="20" /></span><div><strong>Scolarité</strong><p>Inscriptions, notes, résultats, emploi du temps : le service pédagogique de votre établissement.</p></div></article>
+      <article class="carte bloc rise" style="animation-delay:.16s"><span class="pastille"><app-icon nom="document-attach" [taille]="20" /></span><div><strong>Documents et absences</strong><p>Attestations, relevés et justificatifs d'absence : le service support, via vos démarches en ligne.</p></div></article>
+      <article class="carte bloc rise" style="animation-delay:.24s"><span class="pastille"><app-icon nom="key" [taille]="20" /></span><div><strong>Accès au compte</strong><p>Mot de passe oublié ou compte bloqué : le super administrateur de votre établissement.</p></div></article>
+    </div>
+  }
+}

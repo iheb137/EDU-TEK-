@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -29,6 +30,7 @@ public class PresenceController {
     private final PresenceRepository presenceRepository;
     private final SeanceRepository seanceRepository;
     private final EtudiantRepository etudiantRepository;
+    private final tn.tekup.edutek.service.PointageAutoService pointageAuto;
     private final AccesHelper acces;
 
     @GetMapping("/mes-presences")
@@ -57,7 +59,23 @@ public class PresenceController {
         p.setDatePointage(LocalDateTime.now());
         p.setSeance(s);
         p.setEtudiant(etu);
-        return PresenceDto.from(presenceRepository.save(p));
+        Presence enregistree = presenceRepository.save(p);
+        pointerAutomatiquement(s, auth);
+        return PresenceDto.from(enregistree);
+    }
+
+    /** Faire l'appel vaut pointage (voir PointageAutoService) ; seulement pour l'enseignant de la seance. */
+    private void pointerAutomatiquement(Seance s, Authentication auth) {
+        boolean estEnseignantDeLaSeance = s.getEnseignement().getEnseignant() != null
+                && auth.getName().equals(s.getEnseignement().getEnseignant().getEmail());
+        if (!estEnseignantDeLaSeance) {
+            return;
+        }
+        try {
+            pointageAuto.pointerSiNecessaire(s.getId());
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Une autre requete du meme appel vient de creer le pointage : rien a faire.
+        }
     }
 
     @PutMapping("/{id}")

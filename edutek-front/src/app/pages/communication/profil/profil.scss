@@ -1,0 +1,23 @@
+.grille { margin-top: 22px; display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items: start; }
+.identite { padding: 28px 26px 22px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+.avatar { width: 76px; height: 76px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff;
+  background: linear-gradient(135deg, var(--navy-800), var(--indigo)); box-shadow: 0 10px 24px -10px rgb(61 91 214 / 60%); }
+.identite h2 { margin-top: 14px; font-size: 20px; font-weight: 800; }
+.centre { justify-content: center; margin-top: 10px; }
+dl { width: 100%; margin: 20px 0 0; padding: 0; text-align: left; border-top: 1px solid #eef1f8; }
+dl div { display: flex; flex-direction: column; gap: 3px; padding: 11px 0; border-bottom: 1px solid #eef1f8; }
+dt { display: flex; align-items: center; gap: 7px; font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--faint); }
+dd { margin: 0 0 0 24px; font-size: 14.5px; font-weight: 600; overflow-wrap: anywhere; }
+.etab { text-transform: uppercase; letter-spacing: .05em; color: var(--indigo); }
+.identite .note { margin: 14px 0 0; text-align: left; line-height: 1.5; }
+
+.mdp { padding: 24px 28px; }
+.tete { display: flex; gap: 14px; align-items: center; margin-bottom: 18px; p { margin: 3px 0 0; font-size: 13.5px; } }
+.pictogramme { flex-shrink: 0; width: 42px; height: 42px; border-radius: 12px; display: flex; align-items: center; justify-content: center; background: #e8edfb; color: var(--indigo); }
+.succes { margin: 0 0 18px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px 16px; }
+.lien-btn { all: unset; cursor: pointer; font-weight: 700; font-size: 13.5px; text-decoration: underline; &:focus-visible { outline: 2px solid currentColor; } }
+.champ-f input[readonly] { background: #eef1f7; color: var(--muted); border-style: dashed; cursor: default; }
+.formulaire { max-width: 620px; }
+.pied { justify-content: flex-start; }
+
+@media (max-width: 900px) { .grille { grid-template-columns: 1fr; } }

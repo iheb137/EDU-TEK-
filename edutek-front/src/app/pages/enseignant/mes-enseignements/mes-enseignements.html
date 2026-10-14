@@ -1,0 +1,151 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Enseignement</p>
+    <h1>{{ admin ? 'Enseignements' : 'Mes enseignements' }}</h1>
+    <p class="intro">Suivez l'avancement de la saisie des notes de chaque enseignement, puis clôturez la saisie lorsque toutes les notes sont soumises. La clôture est la condition préalable au calcul des résultats du semestre.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" [disabled]="chargement()" (click)="charger()"><app-icon nom="refresh" [taille]="18" />Actualiser</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Rechercher une matière ou une classe" aria-label="Rechercher un enseignement" [value]="recherche()" (input)="recherche.set($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Filtrer par semestre" [value]="semestre()" (change)="choisirSemestre($any($event.target).value)">
+    <option [value]="0">Tous les semestres</option>
+    @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestre()">{{ s.nom }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par classe" [value]="classe()" (change)="choisirClasse($any($event.target).value)">
+    <option [value]="0">Toutes les classes</option>
+    @for (c of classes(); track c.id) { <option [value]="c.id">{{ c.nom }}</option> }
+  </select>
+  @if (!chargement() && lignes().length) {
+    <span class="note">{{ synthese().total }} enseignement{{ synthese().total > 1 ? 's' : '' }} · {{ synthese().completes }} saisie{{ synthese().completes > 1 ? 's' : '' }} complète{{ synthese().completes > 1 ? 's' : '' }} · {{ synthese().clotures }} clôturé{{ synthese().clotures > 1 ? 's' : '' }}</span>
+  }
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !lignes().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (visibles().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Matière</th><th>Classe</th><th>Volume</th><th style="width: 30%">Saisie des notes</th><th>État</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (l of visibles(); track l.e.id) {
+            <tr>
+              <td><span class="nom">{{ l.e.matiere }}</span><span class="sous">{{ l.e.codeMatiere }} · {{ l.e.semestre }}</span></td>
+              <td>{{ l.e.classe }}@if (l.e.groupe) { <span class="sous">Groupe {{ l.e.groupe }}</span> }</td>
+              <td class="chiffre">{{ l.e.volumeHoraire ? l.e.volumeHoraire + ' h' : '' }}</td>
+              <td>
+                @if (!l.av) {
+                  <span class="note">Avancement indisponible</span>
+                } @else if (!l.nbEvaluations) {
+                  <span class="note">Aucune évaluation planifiée</span>
+                } @else {
+                  <div class="avancement" [attr.aria-label]="l.soumises + ' notes soumises sur ' + l.attendues">
+                    <div class="piste"><div class="remplissage" [class.complet]="l.part >= 100" [style.width.%]="l.part"></div></div>
+                    <span class="chiffre">{{ l.soumises }} / {{ l.attendues }}</span>
+                  </div>
+                  <span class="sous">{{ l.nbEvaluations }} évaluation{{ l.nbEvaluations > 1 ? 's' : '' }}@if (l.brouillons) { · {{ l.brouillons }} brouillon{{ l.brouillons > 1 ? 's' : '' }} }</span>
+                }
+              </td>
+              <td>
+                @if (l.av?.cloture) {
+                  <span class="puce gris">Clôturée</span>@if (l.av?.dateCloture) { <span class="sous">le {{ dateFr(l.av?.dateCloture) }}</span> }
+                } @else if (l.av) {
+                  <span class="puce vert">Saisie ouverte</span>
+                }
+              </td>
+              <td>
+                <div class="actions">
+                  <button class="icone" type="button" title="Détail par évaluation" [attr.aria-label]="'Détail de la saisie : ' + l.e.libelle" [disabled]="!l.av" (click)="ouvrir('detail', l)"><app-icon nom="list" [taille]="19" /></button>
+                  <a class="icone" title="Évaluations" [attr.aria-label]="'Évaluations : ' + l.e.libelle" routerLink="/evaluations" [queryParams]="{ enseignementId: l.e.id }"><app-icon nom="document-text" [taille]="19" /></a>
+                  <a class="icone" title="Séances" [attr.aria-label]="'Séances : ' + l.e.libelle" routerLink="/seances" [queryParams]="{ enseignementId: l.e.id }"><app-icon nom="calendar" [taille]="19" /></a>
+                  @if (l.av && !l.av.cloture && peutCloturer) {
+                    <button class="icone" type="button" title="Clôturer la saisie" [attr.aria-label]="'Clôturer la saisie : ' + l.e.libelle" (click)="ouvrir('cloturer', l)"><app-icon nom="lock-closed" [taille]="19" /></button>
+                  }
+                  @if (l.av?.cloture && admin) {
+                    <button class="icone" type="button" title="Rouvrir la saisie" [attr.aria-label]="'Rouvrir la saisie : ' + l.e.libelle" (click)="ouvrir('rouvrir', l)"><app-icon nom="lock-open" [taille]="19" /></button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (lignes().length) {
+    <p class="vide">Aucun enseignement ne correspond à ces filtres.</p>
+  } @else if (!erreur()) {
+    <p class="vide">Aucun enseignement ne vous est affecté pour le moment. Les affectations sont faites par l'administration pédagogique.</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('detail') {
+    <app-modal [titre]="'Saisie : ' + (cible()?.e?.matiere ?? '')" [largeur]="640" (fermer)="fermer()">
+      <p class="gris" style="margin:0 0 6px">{{ cible()?.e?.classe }} · {{ cible()?.e?.semestre }}</p>
+      @if (cible()?.av?.evaluations?.length) {
+        <div class="petit-tableau">
+          <table>
+            <thead><tr><th>Évaluation</th><th class="droite">Attendues</th><th class="droite">Soumises</th><th class="droite">Brouillons</th><th class="droite">Manquantes</th></tr></thead>
+            <tbody>
+              @for (ev of cible()?.av?.evaluations ?? []; track ev.id) {
+                <tr>
+                  <td><span class="nom">{{ typeEval(ev.type) }}</span>@if (ev.anonyme) { <span class="puce gris" style="margin-left:6px">Anonyme</span> }</td>
+                  <td class="droite chiffre">{{ ev.attendues }}</td>
+                  <td class="droite chiffre">{{ ev.soumises }}</td>
+                  <td class="droite chiffre">{{ ev.brouillons }}</td>
+                  <td class="droite chiffre">{{ ev.attendues - ev.soumises - ev.brouillons > 0 ? ev.attendues - ev.soumises - ev.brouillons : 0 }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else { <p class="vide" style="padding-left:0">Aucune évaluation n'est encore planifiée pour cet enseignement.</p> }
+      @if (cible()?.av?.cloture) { <p class="note" style="margin:12px 0 0">Saisie clôturée le {{ dateHeureFr(cible()?.av?.dateCloture) }}.</p> }
+      <div class="pied">
+        <a class="btn clair" routerLink="/evaluations" [queryParams]="{ enseignementId: cible()?.e?.id }"><app-icon nom="document-text" [taille]="18" />Ouvrir les évaluations</a>
+        <button class="btn indigo" type="button" (click)="fermer()">Fermer</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('cloturer') {
+    <app-modal titre="Clôturer la saisie" [largeur]="520" (fermer)="fermer()">
+      @if (cible(); as l) {
+        <div class="recap"><strong>{{ l.e.matiere }}</strong> · {{ l.e.classe }}<br>{{ l.soumises }} note{{ l.soumises > 1 ? 's' : '' }} soumise{{ l.soumises > 1 ? 's' : '' }} sur {{ l.attendues }} attendue{{ l.attendues > 1 ? 's' : '' }}.</div>
+        @if (l.brouillons) {
+          <p class="bandeau" role="alert" style="margin:0 0 12px">{{ l.brouillons }} note{{ l.brouillons > 1 ? 's sont' : ' est' }} encore en brouillon : soumettez-les depuis l'écran des évaluations avant de clôturer.</p>
+        } @else if (manquantes(l)) {
+          <p class="bandeau" style="margin:0 0 12px;background:#fff1d6;color:#8a5a00">{{ manquantes(l) }} note{{ manquantes(l) > 1 ? 's' : '' }} n'{{ manquantes(l) > 1 ? 'ont' : 'a' }} pas été saisie{{ manquantes(l) > 1 ? 's' : '' }}.</p>
+        }
+        <p class="gris" style="margin:0;font-size:14px;line-height:1.55">Après la clôture, plus aucune note ne pourra être ajoutée ni modifiée pour cet enseignement. Seule l'administration pédagogique peut rouvrir la saisie.</p>
+      }
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="cloturer()"><app-icon nom="lock-closed" [taille]="18" />{{ enCours() ? 'Clôture…' : 'Clôturer la saisie' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('rouvrir') {
+    <app-modal titre="Rouvrir la saisie" [largeur]="520" (fermer)="fermer()">
+      <div class="recap"><strong>{{ cible()?.e?.matiere }}</strong> · {{ cible()?.e?.classe }}</div>
+      <p class="gris" style="margin:0;font-size:14px;line-height:1.55">L'enseignant pourra de nouveau saisir des notes. Les résultats déjà calculés pour ce semestre devront être recalculés.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="rouvrir()"><app-icon nom="lock-open" [taille]="18" />{{ enCours() ? 'Réouverture…' : 'Rouvrir la saisie' }}</button>
+      </div>
+    </app-modal>
+  }
+}

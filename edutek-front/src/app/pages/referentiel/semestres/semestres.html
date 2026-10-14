@@ -1,0 +1,95 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Référentiel pédagogique</p>
+    <h1>Semestres</h1>
+    <p class="intro">Chaque semestre appartient à une formation et regroupe ses matières. Les dates bornent la période de saisie et de suivi.</p>
+  </div>
+  @if (peutEcrire) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="nouveau()"><app-icon nom="add" [taille]="18" />Nouveau semestre</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .06s">
+  <select class="champ" aria-label="Filtrer par formation" (change)="filtrer($any($event.target).value)">
+    <option value="" [selected]="!filtreFormation()">Toutes les formations</option>
+    @for (f of formationsTriees(); track f.id) { <option [value]="f.id" [selected]="filtreFormation() === f.id">{{ f.code }} · {{ f.nom }}</option> }
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .12s">
+  @if (chargement() && !semestres().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (lignes().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Semestre</th><th>Formation</th><th>Début</th><th>Fin</th><th class="num">Matières</th><th class="num">Crédits</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (s of lignes(); track s.id) {
+            <tr>
+              <td><span class="nom">{{ s.nom }}</span></td>
+              <td>@if (s.formation) { <a class="lien-doux" [routerLink]="['/formations', s.formationId]">{{ s.formation.code }}</a> } @else { <span class="gris">—</span> }</td>
+              <td class="gris">{{ date(s.dateDebut) || '—' }}</td>
+              <td class="gris">{{ date(s.dateFin) || '—' }}</td>
+              <td class="num">{{ s.nbMatieres }}</td>
+              <td class="num">{{ s.credits }}</td>
+              <td>
+                <div class="actions">
+                  <a class="icone" title="Voir les matières" [attr.aria-label]="'Voir les matières de ' + s.nom" routerLink="/matieres" [queryParams]="{ semestre: s.id }"><app-icon nom="book" [taille]="19" /></a>
+                  @if (peutEcrire) {
+                    <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier ' + s.nom" (click)="modifier(s)"><app-icon nom="pencil" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer ' + s.nom" (click)="demanderSuppression(s)"><app-icon nom="trash" [taille]="19" /></button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination"><span>{{ lignes().length }} semestre{{ lignes().length > 1 ? 's' : '' }}</span></div>
+  } @else {
+    <p class="vide">{{ filtreFormation() ? 'Aucun semestre pour cette formation.' : 'Aucun semestre n\'est encore défini.' }}</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('editer') {
+    <app-modal [titre]="cible() ? 'Modifier le semestre' : 'Nouveau semestre'" [largeur]="580" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="se-nom">Intitulé</label>
+          <input id="se-nom" formControlName="nom" placeholder="ex. Semestre 9 - 2026-2027" autocomplete="off">
+          @if (formulaire.controls.nom.touched && formulaire.controls.nom.invalid) { <span class="erreur-champ">Intitulé obligatoire.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="se-form">Formation</label>
+          <select id="se-form" formControlName="formationId">
+            <option [ngValue]="null" disabled>Choisir une formation</option>
+            @for (f of formationsTriees(); track f.id) { <option [ngValue]="f.id">{{ f.code }} · {{ f.nom }}</option> }
+          </select>
+          @if (formulaire.controls.formationId.touched && formulaire.controls.formationId.invalid) { <span class="erreur-champ">Choisissez une formation.</span> }
+        </div>
+        <div class="champ-f"><label for="se-debut">Date de début</label><input id="se-debut" type="date" formControlName="dateDebut"></div>
+        <div class="champ-f">
+          <label for="se-fin">Date de fin</label><input id="se-fin" type="date" formControlName="dateFin">
+          @if (datesIncoherentes()) { <span class="erreur-champ">La date de fin précède la date de début.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-confirmation titre="Supprimer le semestre" [message]="'Supprimer « ' + cible()?.nom + ' » ?'"
+      detail="Les matières du semestre sont supprimées avec lui. La suppression est refusée si des enseignements ou des résultats y sont rattachés."
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="supprimer()" (fermer)="fermer()" />
+  }
+}

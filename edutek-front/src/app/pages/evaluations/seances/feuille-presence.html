@@ -1,0 +1,88 @@
+<a class="retour" routerLink="/seances"><app-icon nom="arrow-back" [taille]="16" />Toutes les séances</a>
+
+@if (chargement() && !seance()) { <p class="vide">Chargement…</p> }
+@if (erreur() && !seance()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (seance(); as s) {
+  <div class="entete rise">
+    <div>
+      <p class="surtitre">Feuille de présence</p>
+      <h1>{{ matiere()?.nom ?? 'Séance' }} · {{ classe()?.nom }}</h1>
+      <dl class="fiche entete-fiche">
+        <div><dt>Date</dt><dd>{{ date(s.date) }}</dd></div>
+        <div><dt>Horaire</dt><dd>{{ heure(s.heureDebut) }} – {{ heure(s.heureFin) }}</dd></div>
+        <div><dt>Salle</dt><dd>{{ s.salle || '–' }}</dd></div>
+        <div><dt>Matière</dt><dd>{{ matiere()?.code }}</dd></div>
+      </dl>
+    </div>
+    <div class="boutons">
+      <button class="btn clair" type="button" [disabled]="!compteurs().nonPointes" (click)="tousPresents()"><app-icon nom="checkmark-done" [taille]="18" />Marquer les non pointés présents</button>
+    </div>
+  </div>
+
+  @if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+  @if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+  <section class="carte compte rise" style="animation-delay: .08s" aria-label="Synthèse des présences">
+    <div><span>Étudiants</span><strong>{{ compteurs().total }}</strong></div>
+    <div class="vert"><span>Présents</span><strong>{{ compteurs().presents }}</strong></div>
+    <div class="rouge"><span>Absents</span><strong>{{ compteurs().absents }}</strong></div>
+    <div><span>Absences justifiées</span><strong>{{ compteurs().justifies }}</strong></div>
+    <div class="gris-f"><span>Non pointés</span><strong>{{ compteurs().nonPointes }}</strong></div>
+  </section>
+
+  <section class="carte tableau rise" style="animation-delay: .14s">
+    <header class="tete">
+      <p class="gris petit">Cliquez sur « Présent » ou « Absent » pour chaque étudiant ; la justification est saisie pour une absence. Enregistrez une fois la feuille complétée.</p>
+      <div class="recherche petite">
+        <app-icon nom="search" [taille]="17" />
+        <input type="search" placeholder="Nom ou matricule" aria-label="Rechercher un étudiant" [value]="recherche()" (input)="recherche.set($any($event.target).value)">
+      </div>
+    </header>
+    @if (chargement()) {
+      <p class="vide">Chargement…</p>
+    } @else if (!lignes().length) {
+      <p class="vide">Aucun étudiant n'est rattaché à cette classe.</p>
+    } @else {
+      <div class="defile">
+        <table>
+          <thead><tr><th class="n">N°</th><th>Étudiant</th><th>Présence</th><th>Justification</th><th>Pointage</th></tr></thead>
+          <tbody>
+            @for (l of lignesAffichees(); track l.etudiant.id; let i = $index) {
+              <tr [class.modifiee]="l.modifiee">
+                <td class="n gris">{{ i + 1 }}</td>
+                <td><span class="nom">{{ l.etudiant.nom }} {{ l.etudiant.prenom }}</span><br><span class="gris petit">{{ l.etudiant.matricule }}</span></td>
+                <td>
+                  <div class="segment" role="radiogroup" [attr.aria-label]="'Présence de ' + l.etudiant.prenom + ' ' + l.etudiant.nom">
+                    <button type="button" role="radio" class="present" [class.actif]="l.present === true" [attr.aria-checked]="l.present === true" (click)="pointer(l, true)">Présent</button>
+                    <button type="button" role="radio" class="absent" [class.actif]="l.present === false" [attr.aria-checked]="l.present === false" (click)="pointer(l, false)">Absent</button>
+                  </div>
+                </td>
+                <td>
+                  <input class="cellule" type="text" maxlength="250" autocomplete="off" [value]="l.justification" [disabled]="l.present !== false"
+                    [placeholder]="l.present === false ? 'ex. certificat médical' : ''" [attr.aria-label]="'Justification de l\'absence de ' + l.etudiant.prenom + ' ' + l.etudiant.nom"
+                    (input)="justifier(l, $any($event.target).value)">
+                </td>
+                <td class="petit">
+                  @if (l.modifiee) { <span class="puce">Modifié</span> }
+                  @else if (l.presence) { <span class="gris">{{ dateHeure(l.presence.datePointage) }}</span> }
+                  @else { <span class="puce gris">Non pointé</span> }
+                  @if (l.erreur) { <span class="erreur-ligne" [title]="l.erreur"><app-icon nom="alert-circle" [taille]="16" /></span> }
+                </td>
+              </tr>
+            } @empty {
+              <tr><td colspan="5" class="gris">Aucun étudiant ne correspond à « {{ recherche() }} ».</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="barre-enregistrement" [class.active]="nbModifiees() > 0">
+        <span>@if (nbModifiees()) { <strong>{{ nbModifiees() }}</strong> pointage{{ nbModifiees() > 1 ? 's' : '' }} non enregistré{{ nbModifiees() > 1 ? 's' : '' }} } @else { Feuille enregistrée. }</span>
+        <div class="boutons">
+          <button class="btn clair" type="button" [disabled]="!nbModifiees() || enregistrement()" (click)="annuler()">Annuler les modifications</button>
+          <button class="btn indigo" type="button" [disabled]="!nbModifiees() || enregistrement()" (click)="enregistrer()"><app-icon nom="checkmark" [taille]="18" />{{ enregistrement() ? 'Enregistrement…' : 'Enregistrer la feuille' }}</button>
+        </div>
+      </div>
+    }
+  </section>
+}

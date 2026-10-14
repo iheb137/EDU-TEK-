@@ -30,6 +30,12 @@ def evaluer(y: np.ndarray, p: np.ndarray) -> Dict[str, float]:
         "taux_echec": float(y.mean()),
         "n": int(len(y)),
     }
+    # Utilite pour un conseiller : parmi les 20 % d'etudiants les plus a risque selon le modele,
+    # quelle part des echecs reels est reperee ? (1,0 = tous ; 0,2 = hasard)
+    k = max(1, int(round(0.2 * len(y))))
+    haut = np.argsort(-p, kind="stable")[:k]
+    total_echecs = float((y == 1).sum())
+    sortie["rappel_top20"] = float(y[haut].sum()) / total_echecs if total_echecs else 0.0
     for seuil in (0.3, 0.5, 0.7):
         pred = p >= seuil
         tp = float(((pred == 1) & (y == 1)).sum())

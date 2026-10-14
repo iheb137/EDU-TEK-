@@ -1,0 +1,66 @@
+// Supports de cours (enseignant et étudiant) : liste des enseignements à gauche, supports à droite.
+.espace { margin-top: 22px; display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 18px; align-items: start; }
+@media (max-width: 900px) { .espace { grid-template-columns: 1fr; } }
+
+.colonne { padding: 10px; position: sticky; top: 86px; max-height: calc(100vh - 110px); overflow: auto; }
+@media (max-width: 900px) { .colonne { position: static; max-height: none; } }
+.recherche.petite { margin: 4px 4px 10px; }
+.enseignements { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.ens {
+  all: unset; box-sizing: border-box; width: 100%; cursor: pointer; display: grid; grid-template-columns: 1fr auto;
+  column-gap: 10px; padding: 11px 12px; border-radius: 11px; border: 1px solid transparent;
+  &:hover { background: #f4f6fb; }
+  &:focus-visible { outline: 2px solid var(--indigo); outline-offset: 1px; }
+  &.actif { background: #eef1fd; border-color: #d9dffb; }
+}
+.ens-nom { font-weight: 700; font-size: 14px; color: var(--ink); grid-column: 1; }
+.ens-sous { font-size: 12.5px; color: var(--muted); grid-column: 1; margin-top: 2px; }
+.ens-compte {
+  grid-column: 2; grid-row: 1 / span 2; align-self: center; min-width: 26px; height: 24px; padding: 0 7px; border-radius: 12px;
+  background: var(--indigo); color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;
+  &.zero { background: #e7ebf4; color: var(--muted); }
+}
+
+.detail { padding: 22px 24px; min-width: 0; }
+.detail-tete { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; padding-bottom: 14px; border-bottom: 1px solid var(--line); }
+.detail-tete h2 { margin: 0; font-size: 20px; }
+.detail-tete p { margin: 4px 0 0; }
+
+.chapitre { margin: 22px 0 8px; font-size: 13px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.supports { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.supports li { display: flex; align-items: center; gap: 14px; padding: 13px 16px; border-top: 1px solid #eef1f8; background: var(--surface); }
+.supports li:first-child { border-top: 0; }
+.supports li.masque { background: #fafbfd; }
+.supports li.masque .titre-support { color: var(--muted); }
+.format {
+  flex-shrink: 0; width: 48px; height: 48px; border-radius: 12px; background: #eef1fd; color: var(--indigo);
+  font-size: 11.5px; font-weight: 800; letter-spacing: .03em; display: flex; align-items: center; justify-content: center;
+  &.lien-format { background: #e6f6f1; color: #146b52; }
+}
+.corps { flex: 1; min-width: 0; }
+.titre-support { display: block; font-weight: 700; font-size: 14.5px; color: var(--ink); }
+.corps .sous { display: block; font-size: 12.5px; color: var(--muted); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.corps .puce { margin-top: 6px; display: inline-block; }
+.supports .actions { display: flex; gap: 4px; flex-shrink: 0; }
+a.icone { display: inline-flex; align-items: center; justify-content: center; color: inherit; }
+
+.vide-bloc { text-align: center; padding: 36px 16px 26px; color: var(--muted); }
+.vide-bloc app-icon { color: #b3bdd6; }
+.vide-bloc p { max-width: 460px; margin: 10px auto 18px; line-height: 1.55; }
+.vide-bloc strong { display: block; color: var(--ink); margin-bottom: 4px; }
+
+.texte-boite { margin: 0 0 14px; line-height: 1.55; color: var(--muted); }
+.texte-boite strong { color: var(--ink); }
+.case { display: flex; align-items: flex-start; gap: 8px; font-size: 13.5px; margin-top: 4px; cursor: pointer; }
+.case input { margin-top: 3px; }
+.btn.rouge { background: #c2372c; color: #fff; }
+.btn.rouge:hover:not(:disabled) { background: #a92c22; }
+.formulaire .case { grid-column: 1 / -1; }
+@media (max-width: 600px) {
+  .detail { padding: 18px 16px; }
+  .supports li { flex-wrap: wrap; padding: 12px; gap: 10px 12px; }
+  .format { width: 42px; height: 42px; }
+  .corps { flex: 1 1 calc(100% - 60px); }
+  .corps .sous { white-space: normal; }
+  .supports .actions { width: 100%; justify-content: flex-end; }
+}

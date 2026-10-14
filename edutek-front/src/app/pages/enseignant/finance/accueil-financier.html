@@ -1,0 +1,96 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Finance{{ peutTraiter ? '' : ' · consultation' }}</p>
+    <h1>Rémunération des enseignants</h1>
+    <p class="intro">Pointages des séances à vérifier, états de paiement à valider puis à payer, et tarifs horaires en vigueur.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/tarifs"><app-icon nom="cash" [taille]="18" />Tarifs</a>
+    <a class="btn indigo" routerLink="/paiements" [queryParams]="{ periode: moisPrecedent }"><app-icon nom="calculator" [taille]="18" />États de {{ periodeFr(moisPrecedent).toLowerCase() }}</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+@if (!chargement() && !tarifGeneral()) {
+  <p class="bandeau" role="alert">Aucun tarif général n'est en vigueur : les enseignants sans tarif de grade ne pourront pas être payés. <a class="lien-alerte" routerLink="/tarifs">Définir un tarif</a></p>
+}
+
+<section class="indicateurs" aria-label="Indicateurs">
+  <a class="carte rise kpi" style="animation-delay: .06s" routerLink="/pointages" [queryParams]="{ statut: 'EN_ATTENTE' }">
+    <div class="ligne"><span class="titre">Pointages à traiter</span><span class="pastille" style="background: var(--risk-mid)"><app-icon nom="time" [taille]="20" /></span></div>
+    <div class="valeur">{{ chargement() ? '…' : pointages().length }}</div>
+    <span class="note">{{ ecarts() }} avec un écart par rapport au planning</span>
+  </a>
+  <a class="carte rise kpi" style="animation-delay: .12s" routerLink="/pointages" [queryParams]="{ statut: 'ANOMALIE' }">
+    <div class="ligne"><span class="titre">Pointages en anomalie</span><span class="pastille" style="background: var(--risk-high)"><app-icon nom="warning" [taille]="20" /></span></div>
+    <div class="valeur">{{ chargement() ? '…' : anomalies().length }}</div>
+    <span class="note">Exclus des paiements jusqu'à décision</span>
+  </a>
+  <a class="carte rise kpi" style="animation-delay: .18s" routerLink="/paiements" [queryParams]="{ statut: 'BROUILLON' }">
+    <div class="ligne"><span class="titre">États à valider</span><span class="pastille" style="background: var(--indigo)"><app-icon nom="receipt" [taille]="20" /></span></div>
+    <div class="valeur">{{ chargement() ? '…' : brouillons().length }}</div>
+    <span class="note">{{ montantFr(somme(brouillons())) }} en brouillon</span>
+  </a>
+  <a class="carte rise kpi" style="animation-delay: .24s" routerLink="/paiements" [queryParams]="{ statut: 'VALIDE' }">
+    <div class="ligne"><span class="titre">États à payer</span><span class="pastille" style="background: var(--risk-low)"><app-icon nom="wallet" [taille]="20" /></span></div>
+    <div class="valeur">{{ chargement() ? '…' : aPayer().length }}</div>
+    <span class="note">{{ montantFr(somme(aPayer())) }} validés, non versés</span>
+  </a>
+</section>
+
+<div class="duo">
+  <section class="carte rise grand" style="animation-delay: .3s">
+    <div class="ligne"><h2>Pointages en attente par mois</h2><a class="lien" style="margin-top:0" routerLink="/pointages" [queryParams]="{ statut: 'EN_ATTENTE' }">File de traitement <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+    @if (parMois().length) {
+      <div class="petit-tableau sans-bord">
+        <table>
+          <thead><tr><th>Mois</th><th class="droite">Pointages</th><th class="droite">Enseignants</th><th class="droite">Durée déclarée</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (g of parMois(); track g.periode) {
+              <tr>
+                <td><span class="nom">{{ periodeFr(g.periode) }}</span></td>
+                <td class="droite chiffre">{{ g.nb }}</td>
+                <td class="droite chiffre">{{ g.enseignants.size }}</td>
+                <td class="droite chiffre">{{ dureeFr(g.minutes) }}</td>
+                <td><div class="actions"><a class="mini" routerLink="/pointages" [queryParams]="{ statut: 'EN_ATTENTE', periode: g.periode }">Traiter</a></div></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <h3 class="sous-titre">Les plus anciens</h3>
+      <ul class="liste">
+        @for (p of plusAnciens(); track p.id) {
+          <li>
+            <span class="corps"><strong>{{ p.enseignantNom }}</strong><span class="note">{{ p.matiereNom }} · {{ p.classeNom }} · {{ dateFr(p.date) }}, {{ heure(p.heureDebut) }}</span></span>
+            <span class="chiffre" [class.danger-texte]="p.minutesDeclarees !== p.minutesPlanifiees">{{ dureeFr(p.minutesDeclarees) }}</span>
+          </li>
+        }
+      </ul>
+    } @else { <p class="vide" style="padding-left:0">{{ chargement() ? 'Chargement…' : 'Aucun pointage en attente : la file de traitement est vide.' }}</p> }
+  </section>
+
+  <div class="colonne">
+    <section class="carte rise petit" style="animation-delay: .38s">
+      <div class="ligne"><h2>États à traiter</h2><a class="lien" style="margin-top:0" routerLink="/paiements">Tous <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+      @if (brouillons().length || aPayer().length) {
+        <ul class="liste">
+          @for (p of aTraiter(); track p.id) {
+            <li>
+              <span class="corps"><strong>{{ p.enseignantNom }}</strong><span class="note">{{ periodeFr(p.periode) }} · {{ montantFr(p.montant) }}</span></span>
+              <span [class]="'puce ' + statutPaiement(p.statut).classe">{{ p.statut === 'BROUILLON' ? 'À valider' : 'À payer' }}</span>
+            </li>
+          }
+        </ul>
+      } @else { <p class="vide" style="padding:14px 0 0">{{ chargement() ? 'Chargement…' : 'Aucun état en attente de validation ou de paiement.' }}</p> }
+    </section>
+
+    <section class="carte rise petit" style="animation-delay: .44s">
+      <div class="ligne"><h2>Tarif général</h2><a class="lien" style="margin-top:0" routerLink="/tarifs">Tarifs <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+      @if (tarifGeneral(); as t) {
+        <p class="tarif chiffre">{{ montantFr(t.montant) }} <span class="note">de l'heure</span></p>
+        <span class="note">En vigueur depuis le {{ dateFr(t.dateDebut) }} · {{ tarifs().length }} tarif{{ tarifs().length > 1 ? 's' : '' }} enregistré{{ tarifs().length > 1 ? 's' : '' }}</span>
+      } @else { <p class="vide" style="padding:14px 0 0">{{ chargement() ? 'Chargement…' : 'Aucun tarif général en vigueur.' }}</p> }
+    </section>
+  </div>
+</div>

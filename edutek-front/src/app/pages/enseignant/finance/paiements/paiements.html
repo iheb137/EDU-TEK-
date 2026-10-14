@@ -1,0 +1,172 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Finance</p>
+    <h1>États de paiement</h1>
+    <p class="intro">Générez chaque mois les états de paiement à partir des pointages validés ou corrigés et des tarifs horaires, puis validez-les et enregistrez leur paiement. Un brouillon peut être régénéré ou supprimé ; un état validé devient visible par l'enseignant.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn clair" type="button" [disabled]="!liste().length" (click)="exporterListe()"><app-icon nom="download" [taille]="18" />Exporter (CSV)</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (peutGenerer) {
+  <section class="carte generation rise" style="animation-delay: .08s" aria-labelledby="titre-gen">
+    <div class="gen-texte">
+      <h2 id="titre-gen">Générer les états d'un mois</h2>
+      <p class="note">Un état est créé (ou recalculé s'il est encore en brouillon) pour chaque enseignant ayant des pointages validés sur la période.</p>
+    </div>
+    <form class="gen-champs" [formGroup]="formGeneration" (ngSubmit)="generer()" novalidate>
+      <div class="champ-f">
+        <label for="g-per">Mois</label>
+        <input id="g-per" type="month" [max]="moisMax" formControlName="periode">
+      </div>
+      <div class="champ-f">
+        <label for="g-ens">Enseignant</label>
+        <select id="g-ens" formControlName="enseignantId">
+          <option [ngValue]="0">Tous les enseignants</option>
+          @for (e of enseignants(); track e.id) { <option [ngValue]="e.id">{{ e.prenom }} {{ e.nom }}</option> }
+        </select>
+      </div>
+      <button class="btn indigo" type="submit" [disabled]="generationEnCours()"><app-icon nom="calculator" [taille]="18" />{{ generationEnCours() ? 'Génération…' : 'Générer' }}</button>
+    </form>
+    @if (erreurGeneration()) { <p class="bandeau" role="alert">{{ erreurGeneration() }}</p> }
+    @if (generation(); as g) {
+      <div class="resultat" role="status">
+        <p class="bandeau" [class.ok]="g.etats.length > 0" [style.background]="g.etats.length ? null : '#fff1d6'" [style.color]="g.etats.length ? null : '#8a5a00'">
+          {{ periodeFr(g.periode) }} : {{ g.etats.length }} état{{ g.etats.length > 1 ? 's' : '' }} généré{{ g.etats.length > 1 ? 's' : '' }} ou recalculé{{ g.etats.length > 1 ? 's' : '' }} en brouillon.
+        </p>
+        @if (g.avertissements.length) {
+          <ul class="liste-avert">@for (a of g.avertissements; track $index) { <li>{{ a }}</li> }</ul>
+        }
+      </div>
+    }
+  </section>
+}
+
+<div class="filtres rise" style="animation-delay: .14s">
+  <input class="champ" style="width:auto" type="month" aria-label="Filtrer par mois" [value]="periode()" (change)="filtrer('periode', $any($event.target).value)">
+  <select class="champ" aria-label="Filtrer par statut" [value]="filtreStatut()" (change)="filtrer('statut', $any($event.target).value)">
+    <option value="">Tous les statuts</option>
+    @for (s of statuts; track s.code) { <option [value]="s.code" [selected]="s.code === filtreStatut()">{{ s.libelle }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par enseignant" [value]="enseignantId()" (change)="filtrer('enseignant', $any($event.target).value)">
+    <option [value]="0">Tous les enseignants</option>
+    @for (e of enseignants(); track e.id) { <option [value]="e.id">{{ e.prenom }} {{ e.nom }}</option> }
+  </select>
+  @if (periode()) { <button class="lien-btn" type="button" (click)="filtrer('periode', '')">Tous les mois</button> }
+  @if (!chargement() && liste().length) {
+    <span class="note">Brouillons {{ montantFr(totaux().brouillon) }} · à payer {{ montantFr(totaux().valide) }} · payé {{ montantFr(totaux().paye) }}</span>
+  }
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .2s">
+  @if (chargement() && !liste().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Enseignant</th><th>Période</th><th class="droite">Durée</th><th class="droite">Montant</th><th>Statut</th><th>Suivi</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (p of liste(); track p.id) {
+            <tr>
+              <td><span class="nom">{{ p.enseignantNom }}</span></td>
+              <td>{{ periodeFr(p.periode) }}</td>
+              <td class="droite chiffre">{{ dureeFr(p.minutes) }}</td>
+              <td class="droite chiffre"><strong>{{ montantFr(p.montant) }}</strong></td>
+              <td><span [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span></td>
+              <td class="gris">
+                @if (p.datePaiement) { Payé le {{ dateFr(p.datePaiement) }} }
+                @else if (p.dateValidation) { Validé le {{ dateFr(p.dateValidation) }} }
+                @else if (p.dateGeneration) { Généré le {{ dateFr(p.dateGeneration) }} }
+              </td>
+              <td>
+                <div class="actions">
+                  <button class="icone" type="button" title="Détail des lignes" [attr.aria-label]="'Détail de l\'état de ' + p.enseignantNom + ', ' + periodeFr(p.periode)" (click)="ouvrirDetail(p)"><app-icon nom="receipt" [taille]="19" /></button>
+                  @if (peutDecider && p.statut === 'BROUILLON') {
+                    <button class="mini" type="button" [attr.aria-label]="'Valider l\'état de ' + p.enseignantNom + ', ' + periodeFr(p.periode)" (click)="demander('valider', p)"><app-icon nom="checkmark" [taille]="15" />Valider</button>
+                    <button class="icone danger" type="button" title="Supprimer le brouillon" [attr.aria-label]="'Supprimer le brouillon de ' + p.enseignantNom + ', ' + periodeFr(p.periode)" (click)="demander('supprimer', p)"><app-icon nom="trash" [taille]="19" /></button>
+                  }
+                  @if (peutDecider && p.statut === 'VALIDE') {
+                    <button class="mini vert" type="button" [attr.aria-label]="'Marquer comme payé l\'état de ' + p.enseignantNom + ', ' + periodeFr(p.periode)" (click)="demander('payer', p)"><app-icon nom="wallet" [taille]="15" />Payer</button>
+                  }
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide">Aucun état de paiement{{ periode() ? ' pour ' + periodeFr(periode()).toLowerCase() : '' }}. {{ peutGenerer ? 'Générez les états du mois une fois les pointages validés.' : '' }}</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('detail') {
+    <app-modal [titre]="'État de paiement · ' + (cible()?.enseignantNom ?? '')" [largeur]="720" (fermer)="fermer()">
+      @if (detail(); as p) {
+        <div class="recap">
+          {{ periodeFr(p.periode) }} · <span [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span>
+          <br><span class="gris">Généré le {{ dateHeureFr(p.dateGeneration) }}@if (p.dateValidation) { · validé le {{ dateHeureFr(p.dateValidation) }} }@if (p.datePaiement) { · payé le {{ dateHeureFr(p.datePaiement) }} }</span>
+        </div>
+        @if (p.lignes?.length) {
+          <div class="petit-tableau">
+            <table>
+              <thead><tr><th>Date</th><th>Matière</th><th class="droite">Durée</th><th class="droite">Tarif horaire</th><th class="droite">Montant</th></tr></thead>
+              <tbody>
+                @for (l of p.lignes; track l.pointageId) {
+                  <tr><td class="chiffre">{{ dateFr(l.date) }}</td><td>{{ l.matiereNom }}</td><td class="droite chiffre">{{ dureeFr(l.minutes) }}</td><td class="droite chiffre">{{ montantFr(l.tarifHoraire) }}</td><td class="droite chiffre">{{ montantFr(l.montant) }}</td></tr>
+                }
+              </tbody>
+              <tfoot><tr><td colspan="2">Total</td><td class="droite chiffre">{{ dureeFr(p.minutes) }}</td><td></td><td class="droite chiffre">{{ montantFr(p.montant) }}</td></tr></tfoot>
+            </table>
+          </div>
+        } @else { <p class="vide" style="padding-left:0">Aucune ligne dans cet état.</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="exporter(p)"><app-icon nom="download" [taille]="18" />Exporter (CSV)</button>
+          @if (peutDecider && p.statut === 'BROUILLON') { <button class="btn indigo" type="button" (click)="demander('valider', p)"><app-icon nom="checkmark" [taille]="18" />Valider l'état</button> }
+          @if (peutDecider && p.statut === 'VALIDE') { <button class="btn indigo" type="button" (click)="demander('payer', p)"><app-icon nom="wallet" [taille]="18" />Marquer comme payé</button> }
+          <button class="btn clair" type="button" (click)="fermer()">Fermer</button>
+        </div>
+      } @else if (erreurFenetre()) {
+        <p class="bandeau" role="alert">{{ erreurFenetre() }}</p>
+      } @else { <p class="vide" style="padding-left:0">Chargement…</p> }
+    </app-modal>
+  }
+  @case ('valider') {
+    <app-modal titre="Valider l'état de paiement" [largeur]="520" (fermer)="fermer()">
+      <div class="recap"><strong>{{ cible()?.enseignantNom }}</strong> · {{ periodeFr(cible()?.periode) }}<br>{{ dureeFr(cible()?.minutes) }} · <strong>{{ montantFr(cible()?.montant) }}</strong></div>
+      <p class="gris" style="margin:0;font-size:14px;line-height:1.55">Une fois validé, l'état ne peut plus être régénéré ni supprimé, et les pointages qu'il contient ne peuvent plus être modifiés. L'enseignant est notifié et peut consulter son état.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="executer('valider')"><app-icon nom="checkmark" [taille]="18" />{{ enCours() ? 'Validation…' : 'Valider l\'état' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('payer') {
+    <app-modal titre="Enregistrer le paiement" [largeur]="520" (fermer)="fermer()">
+      <div class="recap"><strong>{{ cible()?.enseignantNom }}</strong> · {{ periodeFr(cible()?.periode) }}<br>Montant versé : <strong>{{ montantFr(cible()?.montant) }}</strong></div>
+      <p class="gris" style="margin:0;font-size:14px;line-height:1.55">Confirmez que ce montant a bien été versé à l'enseignant. Cette action est définitive.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="executer('payer')"><app-icon nom="wallet" [taille]="18" />{{ enCours() ? 'Enregistrement…' : 'Marquer comme payé' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-modal titre="Supprimer le brouillon" [largeur]="500" (fermer)="fermer()">
+      <div class="recap"><strong>{{ cible()?.enseignantNom }}</strong> · {{ periodeFr(cible()?.periode) }} · {{ montantFr(cible()?.montant) }}</div>
+      <p class="gris" style="margin:0;font-size:14px;line-height:1.55">Le brouillon est supprimé ; les pointages restent validés et pourront être repris lors d'une nouvelle génération.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="executer('supprimer')"><app-icon nom="trash" [taille]="18" />{{ enCours() ? 'Suppression…' : 'Supprimer le brouillon' }}</button>
+      </div>
+    </app-modal>
+  }
+}

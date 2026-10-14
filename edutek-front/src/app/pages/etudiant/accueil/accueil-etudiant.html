@@ -1,0 +1,92 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">{{ semestre()?.nom ?? 'Espace étudiant' }}</p>
+    <h1>Bonjour {{ auth.session()?.prenom || auth.nomComplet() }}</h1>
+    <p class="intro">Votre semestre en un coup d'œil : résultats provisoires, assiduité, conseils de suivi et démarches en cours.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/mes-notes"><app-icon nom="document-text" [taille]="18" />Mes notes</a>
+    <a class="btn indigo" routerLink="/mon-bulletin"><app-icon nom="reader" [taille]="18" />Mon bulletin</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+@if (manquantes().length) { <p class="bandeau" role="alert">Certaines informations n'ont pas pu être chargées ({{ manquantes().join(', ') }}). Réessayez plus tard.</p> }
+
+@if (chargement()) {
+  <section class="carte bloc rise"><p class="vide" style="padding:0">Chargement…</p></section>
+} @else if (!erreur()) {
+  @if (!semestre()) {
+    <section class="carte bloc rise"><p class="vide-bloc"><strong>Aucun semestre en cours.</strong>Votre synthèse apparaîtra ici dès l'ouverture d'un semestre.</p></section>
+  } @else {
+    <section class="indicateurs" aria-label="Indicateurs du semestre">
+      @for (k of cartes(); track k.titre; let i = $index) {
+        <a class="carte rise" [routerLink]="k.lien" [style.animation-delay]="delai(i)">
+          <div class="ligne"><span class="titre">{{ k.titre }}</span><span class="pastille" [style.background]="k.couleur"><app-icon [nom]="k.icone" [taille]="20" /></span></div>
+          <div class="valeur">{{ k.valeur }}@if (k.sur) {<small>/ 20</small>}</div>
+          <div class="note">{{ k.note }}</div>
+        </a>
+      }
+    </section>
+    <p class="note avert rise" style="animation-delay: .4s">Moyenne et crédits indicatifs, calculés pour le suivi : seul le bulletin publié a une valeur officielle.</p>
+  }
+
+  <div class="duo">
+    <section class="carte rise" style="animation-delay: .45s">
+      <div class="ligne"><h2>Prochaines classes virtuelles</h2><a class="lien" routerLink="/mes-classes-virtuelles">Toutes <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+      @if (prochainesClasses().length) {
+        <ul class="liste">
+          @for (c of prochainesClasses(); track c.id) {
+            <li>
+              <div class="date-bloc"><b>{{ jour(c.dateHeure) }}</b><span>{{ mois(c.dateHeure) }}</span></div>
+              <div class="corps"><strong>{{ c.matiereNom }}</strong><span>{{ heure(c.dateHeure) }} · {{ plateforme(c.plateforme) }}{{ c.enseignantNom ? ' · ' + c.enseignantNom : '' }}</span></div>
+              <a class="btn indigo petit" [href]="c.lien" target="_blank" rel="noopener" [attr.aria-label]="'Rejoindre : ' + c.matiereNom"><app-icon nom="videocam" [taille]="16" />Rejoindre</a>
+            </li>
+          }
+        </ul>
+      } @else { <p class="vide-liste">Aucune classe virtuelle programmée.</p> }
+    </section>
+
+    <section class="carte rise" style="animation-delay: .52s">
+      <div class="ligne"><h2>Démarches en cours</h2><a class="lien" routerLink="/mes-demandes">Demander un document <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+      @if (demarches().length) {
+        <ul class="liste">
+          @for (d of demarches(); track d.cle) {
+            <li>
+              <span class="pastille" [style.background]="d.pret ? '#1f9d78' : '#7a88a8'"><app-icon [nom]="d.pret ? 'checkmark-done' : 'hourglass'" [taille]="18" /></span>
+              <div class="corps"><strong>{{ d.titre }}</strong><span>{{ d.detail }}</span></div>
+              <a class="puce" [class.vert]="d.pret" [class.orange]="!d.pret" [routerLink]="d.lien">{{ d.statut }}</a>
+            </li>
+          }
+        </ul>
+      } @else { <p class="vide-liste">Aucune demande ni justificatif en attente.</p> }
+    </section>
+  </div>
+
+  <div class="duo">
+    <section class="carte rise" style="animation-delay: .6s">
+      <div class="ligne"><h2>Recommandations non lues</h2><a class="lien" routerLink="/mes-recommandations">Toutes <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+      @if (recommandations().length) {
+        <ul class="liste recos">
+          @for (r of recommandations(); track r.id) {
+            <li><div class="corps"><strong>{{ categorie(r.categorie) }}</strong><span>{{ r.texte }}</span></div></li>
+          }
+        </ul>
+      } @else { <p class="vide-liste">Aucune nouvelle recommandation.</p> }
+    </section>
+
+    <section class="carte rise" style="animation-delay: .68s">
+      <div class="ligne"><h2>Dernières notes</h2><a class="lien" routerLink="/mes-notes">Toutes mes notes <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+      @if (dernieresNotes().length) {
+        <ul class="liste">
+          @for (x of dernieresNotes(); track x.note.id) {
+            <li>
+              <div class="corps"><strong>{{ x.ev!.matiere }}</strong><span>{{ x.ev!.type }} · {{ date(x.ev!.date) }}</span></div>
+              <span><span class="note-val" [class.faible]="x.note.valeur < 10">{{ nombre(x.note.valeur) }}</span><span class="sur"> / 20</span></span>
+            </li>
+          }
+        </ul>
+      } @else { <p class="vide-liste">Aucune note publiée pour l'instant.</p> }
+    </section>
+  </div>
+}

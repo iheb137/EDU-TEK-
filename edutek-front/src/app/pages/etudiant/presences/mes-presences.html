@@ -1,0 +1,90 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Assiduité</p>
+    <h1>Mes présences</h1>
+    <p class="intro">Le pointage de chaque séance, saisi par vos enseignants. En cas d'absence pour un motif valable, déposez un justificatif auprès du support administratif.</p>
+  </div>
+  <div class="boutons">
+    @if (semestres().length) {
+      <label class="choix">
+        <span class="visuel-cache">Semestre</span>
+        <select (change)="choisir($any($event.target).value)" aria-label="Choisir le semestre">
+          @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestreId()">{{ s.nom }}</option> }
+        </select>
+      </label>
+    }
+    <a class="btn indigo" routerLink="/mes-justificatifs"><app-icon nom="document-attach" [taille]="18" />Mes justificatifs</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement()) {
+  <section class="carte bloc rise"><p class="vide" style="padding:0">Chargement…</p></section>
+} @else if (!erreur()) {
+  <section class="indicateurs" aria-label="Synthèse de l'assiduité">
+    @for (k of cartes(); track k.titre; let i = $index) {
+      <article class="carte rise" [style.animation-delay]="(0.08 + i * 0.07) + 's'">
+        <div class="ligne"><span class="titre">{{ k.titre }}</span><span class="pastille" [style.background]="k.couleur"><app-icon [nom]="k.icone" [taille]="20" /></span></div>
+        <div class="valeur">{{ k.valeur }}</div>
+        <div class="note">{{ k.note }}</div>
+      </article>
+    }
+  </section>
+
+  @if (lignes().length) {
+    <div class="duo">
+      <section class="carte tableau principal rise" style="animation-delay: .35s">
+        <div class="ligne tete">
+          <h2>Séances</h2>
+          <div class="segments" role="group" aria-label="Filtrer les séances">
+            <button type="button" [class.actif]="filtre() === 'toutes'" [attr.aria-pressed]="filtre() === 'toutes'" (click)="filtre.set('toutes')">Toutes</button>
+            <button type="button" [class.actif]="filtre() === 'absences'" [attr.aria-pressed]="filtre() === 'absences'" (click)="filtre.set('absences')">Absences</button>
+          </div>
+        </div>
+        @if (affichees().length) {
+          <div class="defile">
+            <table>
+              <thead><tr><th>Date</th><th>Matière</th><th>Salle</th><th>Pointage</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+              <tbody>
+                @for (l of affichees(); track l.presence.id) {
+                  <tr [class.absence]="l.etat !== 'present'">
+                    <td style="white-space:nowrap"><span class="nom">{{ date(l.seance?.date) }}</span><br><span class="gris">{{ heure(l.seance?.heureDebut) }} – {{ heure(l.seance?.heureFin) }}</span></td>
+                    <td>{{ l.seance?.matiere }}<br><span class="gris">{{ l.seance?.enseignant }}</span></td>
+                    <td class="gris">{{ l.seance?.salle }}</td>
+                    <td>
+                      <span class="puce" [class.vert]="l.etat === 'present'" [class.indigo]="l.etat === 'justifiee'" [class.orange]="l.etat === 'attente'" [class.rouge]="l.etat === 'absent'">{{ libelleEtat(l.etat) }}</span>
+                      @if (l.etat === 'justifiee' && l.presence.justification) { <br><span class="note">{{ l.presence.justification }}</span> }
+                    </td>
+                    <td>
+                      @if (l.etat === 'absent') {
+                        <div class="actions"><a class="lien" routerLink="/mes-justificatifs" [queryParams]="{ debut: l.seance?.date, fin: l.seance?.date }" [attr.aria-label]="'Justifier l\'absence du ' + date(l.seance?.date)">Justifier</a></div>
+                      }
+                    </td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else { <p class="vide-bloc">Aucune absence sur ce semestre.</p> }
+      </section>
+
+      <section class="carte cote rise" style="animation-delay: .45s">
+        <h2>Présence par matière</h2>
+        <div class="matieres">
+          @for (m of parMatiere(); track m.nom) {
+            <div>
+              <div class="ligne"><strong>{{ m.nom }}</strong><span class="note">{{ m.absences }} absence{{ m.absences > 1 ? 's' : '' }} / {{ m.total }}</span></div>
+              <div class="piste"><div class="remplissage" [style.width.%]="m.part" [style.background]="m.part >= 90 ? '#2fb98d' : m.part >= 75 ? '#f0a01c' : '#e5483b'"></div></div>
+            </div>
+          }
+        </div>
+      </section>
+    </div>
+  } @else {
+    <section class="carte bloc rise" style="animation-delay: .35s"><p class="vide-bloc"><strong>Aucune séance pointée sur ce semestre.</strong>Le pointage apparaît ici dès que vos enseignants l'ont saisi.</p></section>
+  }
+  @if (nonRattachees()) {
+    <p class="note" style="margin-top:14px">{{ nonRattachees() }} pointage{{ nonRattachees() > 1 ? 's' : '' }} n'{{ nonRattachees() > 1 ? 'ont' : 'a' }} pas pu être rattaché{{ nonRattachees() > 1 ? 's' : '' }} à une séance de votre calendrier.</p>
+  }
+}

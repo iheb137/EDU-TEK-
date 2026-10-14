@@ -1,0 +1,67 @@
+<header class="entete">
+  <div class="conteneur">
+    <a class="marque" routerLink="/tableau-de-bord" aria-label="Edu-Tek, accueil">
+      <img src="images/logo-edutek.png" alt="" width="38" height="38">
+      <span>EDU-TEK</span>
+    </a>
+
+    <button class="burger" type="button" (click)="basculerMobile()" [attr.aria-expanded]="mobile()" aria-controls="navigation" aria-label="Ouvrir le menu">
+      <app-icon [nom]="mobile() ? 'close' : 'list'" [taille]="24" />
+    </button>
+
+    <nav id="navigation" class="menu" [class.deploye]="mobile()" aria-label="Navigation principale">
+      @for (entree of menu(); track entree.libelle) {
+        @if (entree.enfants) {
+          <div class="groupe" [class.ouvert]="groupeOuvert() === entree.libelle">
+            <button class="lien" type="button" [class.actif]="groupeActif(entree)" (click)="basculerGroupe(entree.libelle)"
+                    [attr.aria-expanded]="groupeOuvert() === entree.libelle" aria-haspopup="true">
+              <app-icon [nom]="entree.icone" [taille]="18" />
+              {{ entree.libelle }}
+              @if (entree.badge === 'alertes' && alertesOuvertes() > 0) { <span class="badge">{{ alertesOuvertes() }}</span> }
+              <app-icon class="chevron" nom="chevron-down" [taille]="14" />
+            </button>
+            <div class="sous-menu" role="menu">
+              @for (s of entree.enfants; track s.route) {
+                <a class="sous-lien" role="menuitem" [routerLink]="s.route" routerLinkActive="actif" ariaCurrentWhenActive="page">
+                  <span class="sous-icone"><app-icon [nom]="s.icone" [taille]="17" /></span>{{ s.libelle }}
+                </a>
+              }
+            </div>
+          </div>
+        } @else {
+          <a class="lien" [routerLink]="entree.route" routerLinkActive="actif" ariaCurrentWhenActive="page">
+            <app-icon [nom]="entree.icone" [taille]="18" />
+            {{ entree.libelle }}
+          </a>
+        }
+      }
+    </nav>
+
+    <div class="actions">
+      <app-compteur-messages />
+      <app-cloche-notifications />
+      <div class="compte-zone">
+        <button class="compte" type="button" (click)="basculer()" [attr.aria-expanded]="ouvert()" aria-haspopup="menu"
+                [attr.aria-label]="'Menu du compte : ' + auth.nomComplet()" [title]="auth.nomComplet()">
+          <app-icon nom="person-circle" [taille]="32" />
+          <app-icon nom="chevron-down" [taille]="16" />
+        </button>
+        @if (ouvert()) {
+          <div class="menu-compte" role="menu">
+            <div class="identite">
+              <strong>{{ auth.nomComplet() }}</strong>
+              <span>{{ auth.session()?.email }}</span>
+              <span class="etab">{{ auth.session()?.etablissement }} · {{ roleAffiche() }}</span>
+            </div>
+            <a role="menuitem" routerLink="/profil"><app-icon nom="person" [taille]="18" /> Mon profil</a>
+            <a role="menuitem" routerLink="/messagerie"><app-icon nom="chatbubbles" [taille]="18" /> Messagerie</a>
+            <a role="menuitem" routerLink="/notifications"><app-icon nom="notifications" [taille]="18" /> Notifications</a>
+            <a role="menuitem" routerLink="/annuaire"><app-icon nom="people" [taille]="18" /> Annuaire</a>
+            <a role="menuitem" routerLink="/calendrier"><app-icon nom="calendar" [taille]="18" /> Mon calendrier</a>
+            <button type="button" role="menuitem" class="sortie" (click)="quitter()"><app-icon nom="log-out" [taille]="18" /> Se déconnecter</button>
+          </div>
+        }
+      </div>
+    </div>
+  </div>
+</header>

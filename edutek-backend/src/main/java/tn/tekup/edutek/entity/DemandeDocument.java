@@ -36,7 +36,24 @@ public class DemandeDocument extends EntiteEtablissement {
     @JoinColumn(name = "traite_par_id")
     private AdminSupport traitePar;
 
+    /** Ancien mode de livraison par lien (conserve pour les donnees existantes, plus utilise). */
     @OneToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "document_genere_id")
     private DocumentGenere documentGenere;
+
+    /** Consigne de retrait communiquee a l'etudiant (bureau, horaires...). */
+    @Column(name = "message_retrait", length = 500)
+    private String messageRetrait;
+
+    /** Date a laquelle le document papier a ete marque pret a retirer. */
+    @Column(name = "date_pret")
+    private LocalDateTime datePret;
+
+    /** Date de remise du document papier a l'etudiant au guichet. */
+    @Column(name = "date_remise")
+    private LocalDateTime dateRemise;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "remis_par_id")
+    private AdminSupport remisPar;
 }

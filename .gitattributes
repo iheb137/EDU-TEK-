@@ -1,0 +1,17 @@
+# Fins de ligne Linux (LF) pour tout le texte : les conteneurs sont sous Linux
+* text=auto eol=lf
+
+# Scripts propres a Windows : CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# Fichiers binaires : aucune conversion
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pdf binary
+*.keras binary
+*.joblib binary
+*.pkl binary

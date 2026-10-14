@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import tn.tekup.edutek.repository.RegleCalculRepository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,6 +19,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class FormationController {
 
+    private final RegleCalculRepository regleCalculRepository;
     private final FormationRepository formationRepository;
 
     @GetMapping
@@ -49,8 +52,13 @@ public class FormationController {
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @PreAuthorize("hasAnyRole('SUPERADMIN','ADMIN_PEDAGOGIQUE')")
+    @Transactional
     public void supprimer(@PathVariable Long id) {
-        formationRepository.delete(trouver(id));
+        Formation f = trouver(id);
+        // Les regles de calcul n'ont de sens qu'avec leur formation : on les supprime avec elle.
+        regleCalculRepository.findByFormationId(id).ifPresent(regleCalculRepository::delete);
+        regleCalculRepository.flush();
+        formationRepository.delete(f);
     }
 
     private Formation trouver(Long id) {

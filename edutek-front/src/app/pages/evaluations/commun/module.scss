@@ -1,0 +1,46 @@
+// Styles partagés par les écrans du module « évaluations » (complètent shared/ui.scss).
+.petit { font-size: 12.5px; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+th.num { text-align: right; }
+.marge { margin-left: 8px; vertical-align: 1px; }
+.lien { color: var(--ink); &:hover { color: var(--indigo); text-decoration: underline; } }
+a.btn { text-decoration: none; }
+a.icone { color: var(--muted); }
+select.champ.large { min-width: 280px; }
+.texte { margin: 0 0 12px; font-size: 14.5px; line-height: 1.55; }
+.texte.alerte { padding: 10px 14px; border-radius: 10px; background: #fff1d6; color: #6b4600; }
+.btn.rouge { background: #b3261e; }
+.icone.danger:hover:not(:disabled) { background: #fce8e6; color: #b3261e; }
+
+.retour { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 14px; font-size: 13.5px; font-weight: 700; color: var(--muted);
+  &:hover { color: var(--indigo); } }
+
+// Case à cocher dans un formulaire en grille
+.case-f { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; font-size: 13.5px; line-height: 1.45; cursor: pointer;
+  &.large { grid-column: 1 / -1; }
+  input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--indigo); flex-shrink: 0; } }
+
+// Jauge d'avancement
+.avancement { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+.jauge { flex: 1; min-width: 80px; max-width: 140px; height: 7px; border-radius: 4px; background: #eceff6; overflow: hidden; display: flex; }
+.jauge .soumis { background: #1f9d78; } .jauge .brouillon { background: #e0a526; }
+
+// Bloc « carte » avec titre de section
+.section { margin-top: 18px; padding: 22px 24px; }
+.section > header { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.section > header p { margin: 4px 0 0; font-size: 13.5px; color: var(--muted); }
+
+// Fiche d'informations (définitions)
+.fiche { margin: 0; display: flex; flex-wrap: wrap; gap: 8px 28px; }
+.fiche div { display: flex; flex-direction: column; gap: 2px; }
+.fiche dt { font-size: 11.5px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+.fiche dd { margin: 0; font-size: 14.5px; font-weight: 600; }
+
+// Liste d'erreurs d'import et résumé
+.liste-erreurs { margin: 10px 0 0; padding-left: 18px; font-size: 13px; color: #b3261e; max-height: 180px; overflow: auto; }
+.resume { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
+.fichier { width: 100%; padding: 14px; border: 1px dashed #b9c4e2; border-radius: 12px; background: #f7f9fe; font: 500 14px var(--font); }
+.options { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; font-size: 14px; }
+.options label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.lien-btn { all: unset; cursor: pointer; color: var(--indigo); font-weight: 700; font-size: 13.5px; &:hover { text-decoration: underline; } &:focus-visible { outline: 2px solid var(--indigo); } }
+code.bloc { display: block; margin: 8px 0 12px; padding: 10px 12px; border-radius: 10px; background: #f2f5fb; border: 1px solid #e3e8f3; font: 600 13px ui-monospace, Consolas, monospace; white-space: pre; overflow-x: auto; }

@@ -1,0 +1,93 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Suivi du risque</p>
+    <h1>Paramètres de risque</h1>
+    <p class="intro">Les seuils déterminent à partir de quel score une situation est classée au niveau moyen ou élevé, et donc quand une alerte est proposée à l'équipe. Ils orientent le repérage ; ils ne décident de rien à la place de l'équipe pédagogique.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/predictions"><app-icon nom="analytics" [taille]="18" />Prédictions</a>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement()) {
+  <p class="vide carte">Chargement…</p>
+} @else if (parametres(); as p) {
+  <div class="grille">
+    <section class="carte bloc rise" style="animation-delay: .06s" aria-labelledby="t-seuils">
+      <div class="ligne">
+        <h2 id="t-seuils">{{ peutModifier ? 'Modifier les seuils' : 'Seuils en vigueur' }}</h2>
+        @if (p.dateModification) { <span class="note">Dernière modification le {{ dateHeure(p.dateModification) }}</span> }
+      </div>
+
+      <app-echelle class="echelle" [seuilMoyen]="peutModifier ? propose().moyen : p.seuilMoyen" [seuilEleve]="peutModifier ? propose().eleve : p.seuilEleve" />
+
+      @if (peutModifier) {
+        <form [formGroup]="form" (ngSubmit)="enregistrer()" novalidate>
+          <div class="formulaire">
+            <div class="champ-f">
+              <label for="s-moyen">Seuil du niveau moyen</label>
+              <div class="unite"><input id="s-moyen" type="number" min="1" max="98" step="1" formControlName="moyen" aria-describedby="aide-moyen"><span>%</span></div>
+              <span class="aide" id="aide-moyen">À partir de ce score, la situation est classée « moyen » et une alerte est créée.</span>
+              @if (form.controls.moyen.touched && form.controls.moyen.invalid) { <span class="erreur-champ">Valeur entre 1 et 98 %.</span> }
+            </div>
+            <div class="champ-f">
+              <label for="s-eleve">Seuil du niveau élevé</label>
+              <div class="unite"><input id="s-eleve" type="number" min="2" max="99" step="1" formControlName="eleve" aria-describedby="aide-eleve"><span>%</span></div>
+              <span class="aide" id="aide-eleve">À partir de ce score, la situation est classée « élevé » et l'administration pédagogique reçoit une notification.</span>
+              @if (form.controls.eleve.touched && form.controls.eleve.invalid) { <span class="erreur-champ">Valeur entre 2 et 99 %.</span> }
+            </div>
+          </div>
+          @if (form.hasError('ordre')) { <p class="erreur-champ ordre" role="alert">Le seuil élevé doit être strictement supérieur au seuil moyen.</p> }
+          @if (erreurForm()) { <p class="bandeau" role="alert">{{ erreurForm() }}</p> }
+          <div class="pied">
+            <button class="btn clair" type="button" [disabled]="!modifie() || enCours()" (click)="annuler()">Annuler les changements</button>
+            <button class="btn indigo" type="submit" [disabled]="enCours() || !modifie() || form.invalid">{{ enCours() ? 'Enregistrement…' : 'Enregistrer les seuils' }}</button>
+          </div>
+        </form>
+      } @else {
+        <dl class="valeurs">
+          <div><dt>Seuil du niveau moyen</dt><dd>{{ pct(p.seuilMoyen) }}</dd></div>
+          <div><dt>Seuil du niveau élevé</dt><dd>{{ pct(p.seuilEleve) }}</dd></div>
+        </dl>
+        <p class="principe"><app-icon nom="lock-closed" [taille]="18" /><span>Consultation seule : les seuils sont fixés par l'administration pédagogique.</span></p>
+      }
+    </section>
+
+    <aside class="colonne-droite">
+      <section class="carte bloc rise" style="animation-delay: .12s" aria-labelledby="t-impact">
+        <h2 id="t-impact">Effet sur la dernière analyse</h2>
+        <p class="note sous-titre">{{ semestre()?.nom ?? 'Semestre en cours' }} · dernier score de chaque étudiant</p>
+        @if (impact(); as i) {
+          @if (i.total) {
+            <table class="impact">
+              <thead><tr><th>Niveau</th><th>Seuils actuels</th>@if (peutModifier) { <th>Seuils saisis</th> }</tr></thead>
+              <tbody>
+                <tr><td><span class="niveau ELEVE">ÉLEVÉ</span></td><td class="chiffres">{{ i.actuel.eleve }}</td>@if (peutModifier) { <td class="chiffres" [class.diff]="i.propose.eleve !== i.actuel.eleve">{{ i.propose.eleve }}</td> }</tr>
+                <tr><td><span class="niveau MOYEN">MOYEN</span></td><td class="chiffres">{{ i.actuel.moyen }}</td>@if (peutModifier) { <td class="chiffres" [class.diff]="i.propose.moyen !== i.actuel.moyen">{{ i.propose.moyen }}</td> }</tr>
+                <tr><td><span class="niveau FAIBLE">FAIBLE</span></td><td class="chiffres">{{ i.actuel.faible }}</td>@if (peutModifier) { <td class="chiffres" [class.diff]="i.propose.faible !== i.actuel.faible">{{ i.propose.faible }}</td> }</tr>
+              </tbody>
+            </table>
+            <p class="note">Simulation sur {{ i.total }} étudiant{{ i.total > 1 ? 's' : '' }}. Les niveaux déjà calculés ne changent pas : les nouveaux seuils s'appliquent à la prochaine analyse.</p>
+          } @else {
+            <p class="note">Aucune prédiction sur ce semestre : lancez une analyse pour voir l'effet des seuils.</p>
+          }
+        } @else {
+          <p class="note">Chargement…</p>
+        }
+      </section>
+
+      <section class="carte bloc rise" style="animation-delay: .18s" aria-labelledby="t-repere">
+        <h2 id="t-repere">Bon usage</h2>
+        <ul class="conseils">
+          <li>Un seuil bas repère plus de situations, mais multiplie les alertes à examiner.</li>
+          <li>Un seuil haut réduit les alertes, au risque de repérer certaines situations trop tard.</li>
+          <li>Les avis de l'équipe sur les alertes aident à juger si les seuils sont adaptés.</li>
+        </ul>
+        @if (modeleActif(); as m) { <p class="note">Modèle utilisé : {{ m.nom }}, version {{ m.version }}{{ m.statut === 'STUB' ? ' (règles simples, en attente d\'un modèle entraîné)' : '' }}.</p> }
+      </section>
+    </aside>
+  </div>
+}

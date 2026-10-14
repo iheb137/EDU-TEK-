@@ -54,7 +54,7 @@ class DemandeActivation(BaseModel):
 
 
 class DemandeEntrainement(BaseModel):
-    source: Literal["synthetic", "csv"] = "synthetic"
+    source: Literal["synthetic", "plan", "csv"] = "synthetic"
     etudiants: int = Field(5000, ge=200, le=100000, description="Taille du jeu synthetique")
     fichier: Optional[str] = Field(None, description="Nom d'un CSV place dans le dossier data/ (source csv)")
     graine: int = 42

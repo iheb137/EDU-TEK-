@@ -1,0 +1,97 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Communication</p>
+    <h1>Diffusions</h1>
+    <p class="intro">Adressez une notification à tous les étudiants, à tous les enseignants, à tout l'établissement ou à une seule classe. Elle apparaît dans la cloche de chaque destinataire.</p>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="grille">
+  <section class="carte rise formulaire-diffusion" style="animation-delay: .1s" aria-labelledby="titre-form">
+    <h2 id="titre-form">Nouvelle diffusion</h2>
+    <form [formGroup]="formulaire" (ngSubmit)="verifier()" novalidate>
+      <fieldset class="audiences">
+        <legend>Destinataires</legend>
+        <div class="choix">
+          @for (a of audiences; track a.valeur) {
+            <label class="option" [class.actif]="formulaire.controls.audience.value === a.valeur">
+              <input type="radio" name="audience" [value]="a.valeur" [checked]="formulaire.controls.audience.value === a.valeur" (change)="choisirAudience(a.valeur)">
+              <app-icon [nom]="a.icone" [taille]="20" />
+              <span><strong>{{ a.libelle }}</strong><small>{{ a.detail }}</small></span>
+            </label>
+          }
+        </div>
+      </fieldset>
+
+      @if (estClasse()) {
+        <div class="champ-f">
+          <label for="d-classe">Classe</label>
+          <select id="d-classe" formControlName="classeId">
+            <option value="">{{ classes() === null ? 'Chargement…' : 'Choisir une classe' }}</option>
+            @for (c of classes() ?? []; track c.id) { <option [value]="c.id">{{ c.nom }}@if (c.anneeUniversitaire) { · {{ c.anneeUniversitaire }} }</option> }
+          </select>
+          @if (erreurClasses()) { <span class="erreur-champ">Classes indisponibles : {{ erreurClasses() }}</span> }
+          @else if (formulaire.controls.classeId.touched && classeManquante()) { <span class="erreur-champ">Choisissez la classe destinataire.</span> }
+        </div>
+      }
+
+      <div class="champ-f">
+        <label for="d-titre">Titre</label>
+        <input id="d-titre" formControlName="titre" maxlength="200" autocomplete="off" placeholder="ex. Report de l'examen de réseaux">
+        @if (formulaire.controls.titre.touched && formulaire.controls.titre.invalid) { <span class="erreur-champ">Le titre est obligatoire (200 caractères maximum).</span> }
+      </div>
+      <div class="champ-f">
+        <label for="d-contenu">Message</label>
+        <textarea id="d-contenu" formControlName="contenu" rows="7" maxlength="5000"></textarea>
+        @if (formulaire.controls.contenu.touched && formulaire.controls.contenu.invalid) { <span class="erreur-champ">Le message est obligatoire.</span> }
+      </div>
+      <div class="pied">
+        <button class="btn indigo" type="submit" [disabled]="enCours()"><app-icon nom="send" [taille]="17" />Envoyer la diffusion</button>
+      </div>
+    </form>
+  </section>
+
+  <aside class="rise colonne-droite" style="animation-delay: .18s">
+    @if (resultat(); as r) {
+      <section class="carte recap" role="status" aria-labelledby="titre-recap">
+        <p class="surtitre"><app-icon nom="checkmark-done" [taille]="16" />Diffusion envoyée</p>
+        <p class="chiffre"><strong>{{ nombre(r.destinataires) }}</strong> destinataire{{ r.destinataires > 1 ? 's' : '' }}</p>
+        <h2 id="titre-recap">{{ r.titre }}</h2>
+        <p class="gris">{{ r.cible }} · {{ date(r.date) }}</p>
+        @if (r.destinataires === 0) { <p class="note">Aucun compte ne correspond à cette cible : personne n'a été notifié.</p> }
+      </section>
+    } @else {
+      <section class="carte aide">
+        <h2>Avant d'envoyer</h2>
+        <ul>
+          <li>Une diffusion ne peut être ni modifiée ni retirée après l'envoi.</li>
+          <li>Préférez un titre court et explicite : c'est lui qui s'affiche dans la cloche.</li>
+          <li>Pour une annonce durable, publiez plutôt une actualité.</li>
+        </ul>
+      </section>
+    }
+    @if (historique().length > 1) {
+      <section class="carte historique">
+        <h2>Envoyées pendant cette session</h2>
+        <ul>
+          @for (h of historique(); track h.date) {
+            <li><span class="nom">{{ h.titre }}</span><span class="gris">{{ h.cible }} · {{ nombre(h.destinataires) }} destinataire{{ h.destinataires > 1 ? 's' : '' }}</span></li>
+          }
+        </ul>
+      </section>
+    }
+  </aside>
+</div>
+
+@if (confirmation()) {
+  <app-modal titre="Confirmer la diffusion" [largeur]="500" (fermer)="fermer()">
+    <p class="confirm">Envoyer « <strong>{{ formulaire.controls.titre.value.trim() }}</strong> » à <strong>{{ cible() }}</strong> ?</p>
+    <p class="note" style="margin:8px 0 0">Chaque destinataire recevra une notification. Cette action est définitive.</p>
+    <div class="pied">
+      <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+      <button class="btn indigo" type="button" [disabled]="enCours()" (click)="envoyer()"><app-icon nom="send" [taille]="17" />{{ enCours() ? 'Envoi…' : 'Envoyer' }}</button>
+    </div>
+  </app-modal>
+}

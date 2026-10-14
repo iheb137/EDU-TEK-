@@ -1,0 +1,186 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Suivi du risque</p>
+    <h1>Prédictions</h1>
+    <p class="intro">Historique des scores calculés à chaque analyse, avec les indicateurs qui les expliquent. Un score est une estimation à partir des notes et des présences enregistrées : il aide à repérer, la décision reste humaine.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/alertes"><app-icon nom="warning" [taille]="18" />Alertes</a>
+    <button class="btn indigo" type="button" (click)="ouvrirAnalyse()"><app-icon nom="play" [taille]="17" />Lancer une analyse</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .08s">
+  <select class="champ" aria-label="Semestre" (change)="choisirSemestre($any($event.target).value)">
+    <option value="tous" [selected]="semestreId() === null">Tous les semestres</option>
+    @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestreId()">{{ s.nom }}</option> }
+  </select>
+  <select class="champ etudiant" aria-label="Étudiant" (change)="choisirEtudiant($any($event.target).value)">
+    <option value="" [selected]="etudiantId() === null">Tous les étudiants</option>
+    @for (e of etudiants(); track e.id) { <option [value]="e.id" [selected]="e.id === etudiantId()">{{ e.nom }} {{ e.prenom }} · {{ e.matricule }}</option> }
+  </select>
+  <select class="champ" aria-label="Niveau de risque" (change)="choisirNiveau($any($event.target).value)">
+    <option value="" [selected]="!niveau()">Tous les niveaux</option>
+    @for (n of niveaux; track n) { <option [value]="n" [selected]="n === niveau()">Niveau {{ libelleNiveau(n).toLowerCase() }}</option> }
+  </select>
+  <label class="case-filtre"><input type="checkbox" [checked]="dernieres()" (change)="basculerDernieres($any($event.target).checked)">Dernière prédiction par étudiant</label>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .14s">
+  @if (chargement() && !predictions().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (predictions().length) {
+    <div class="repartition">
+      <span><span class="niveau ELEVE">ÉLEVÉ</span> {{ repartition().eleve }}</span>
+      <span><span class="niveau MOYEN">MOYEN</span> {{ repartition().moyen }}</span>
+      <span><span class="niveau FAIBLE">FAIBLE</span> {{ repartition().faible }}</span>
+    </div>
+    <div class="defile">
+      <table>
+        <thead>
+          <tr>
+            <th>Étudiant</th><th>Score</th><th>Niveau</th><th>Facteur principal</th>
+            @if (semestreId() === null) { <th>Semestre</th> }
+            <th>Calculée le</th><th>Alerte</th><th><span class="visuel-cache">Explications</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (p of visibles(); track p.id) {
+            <tr>
+              <td><span class="nom">{{ p.etudiantNom }}</span><br><span class="gris">{{ p.etudiantMatricule }}</span></td>
+              <td><div class="score"><div class="piste fine"><div [class]="'remplissage ' + p.niveau" [style.width.%]="p.probabilite * 100"></div></div><strong>{{ pourcent(p.probabilite) }}</strong></div></td>
+              <td><span [class]="'niveau ' + p.niveau">{{ libelleNiveau(p.niveau) }}</span></td>
+              <td>
+                @if (principal(p.facteurs); as f) { <span class="facteur">{{ f.libelle }}</span><br><span class="gris">{{ f.valeur }}</span> }
+                @else { <span class="gris">Aucun facteur défavorable</span> }
+              </td>
+              @if (semestreId() === null) { <td class="gris">{{ nomSemestre()(p.semestreId) }}</td> }
+              <td class="gris">{{ dateHeure(p.datePrediction) }}</td>
+              <td>
+                @if (p.alerteId) { <a class="lien" [routerLink]="['/alertes', p.alerteId]">Alerte n° {{ p.alerteId }}</a> }
+                @else { <span class="gris">Aucune</span> }
+              </td>
+              <td><div class="actions"><button class="icone" type="button" title="Voir les explications" [attr.aria-label]="'Voir les explications du score de ' + p.etudiantNom" (click)="voirFacteurs(p)"><app-icon nom="reader" [taille]="19" /></button></div></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span>{{ predictions().length }} prédiction{{ predictions().length > 1 ? 's' : '' }} · page {{ page() + 1 }} sur {{ pages() }}</span>
+      <div class="boutons">
+        <button class="icone" type="button" aria-label="Page précédente" [disabled]="page() <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+        <button class="icone" type="button" aria-label="Page suivante" [disabled]="page() + 1 >= pages()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+      </div>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide">Aucune prédiction pour ces filtres. Lancez une analyse pour calculer les scores du semestre (il faut des notes et des présences enregistrées).</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('facteurs') {
+    @if (selection(); as p) {
+      <app-modal [titre]="'Explication du score · ' + p.etudiantNom" [largeur]="620" (fermer)="fermer()">
+        <div class="entete-modal">
+          <div class="score"><strong class="grand-score">{{ pourcent(p.probabilite) }}</strong><span [class]="'niveau ' + p.niveau">{{ libelleNiveau(p.niveau) }}</span></div>
+          <span class="note">{{ nomSemestre()(p.semestreId) }} · calculé le {{ dateHeure(p.datePrediction) }} · modèle {{ p.modeleNom }} v{{ p.modeleVersion }}</span>
+        </div>
+        <app-facteurs [facteurs]="p.facteurs" />
+        <p class="principe"><app-icon nom="information-circle" [taille]="18" /><span>Ces indicateurs expliquent le calcul ; ils ne décrivent pas l'étudiant. Un échange avec lui reste indispensable avant toute décision.</span></p>
+        <div class="pied">
+          @if (p.alerteId) { <a class="btn clair" [routerLink]="['/alertes', p.alerteId]" (click)="fermer()">Ouvrir l'alerte</a> }
+          <button class="btn indigo" type="button" (click)="fermer()">Fermer</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('analyse') {
+    <app-modal titre="Lancer une analyse" [largeur]="640" (fermer)="fermer()">
+      @if (!resultat()) {
+        <p class="texte-modal">L'analyse recalcule le score à partir des notes et des présences enregistrées. Pour un niveau moyen ou élevé, une alerte est créée, ou mise à jour si l'étudiant a déjà une alerte ouverte ou en cours sur ce semestre.</p>
+        <form class="formulaire" [formGroup]="formAnalyse" (ngSubmit)="lancerAnalyse()" novalidate>
+          <div class="champ-f large">
+            <label for="an-sem">Semestre</label>
+            <select id="an-sem" formControlName="semestreId">
+              @for (s of semestres(); track s.id) { <option [ngValue]="s.id">{{ s.nom }}</option> }
+            </select>
+          </div>
+          <fieldset class="champ-f large portee">
+            <legend>Étudiants concernés</legend>
+            <div class="choix-portee" role="radiogroup">
+              <label class="option" [class.active]="portee() === 'semestre'"><input type="radio" name="portee" [checked]="portee() === 'semestre'" (change)="choisirPortee('semestre')">Tout le semestre</label>
+              <label class="option" [class.active]="portee() === 'classe'"><input type="radio" name="portee" [checked]="portee() === 'classe'" (change)="choisirPortee('classe')">Une classe</label>
+              <label class="option" [class.active]="portee() === 'etudiant'"><input type="radio" name="portee" [checked]="portee() === 'etudiant'" (change)="choisirPortee('etudiant')">Un étudiant</label>
+            </div>
+          </fieldset>
+          @if (portee() === 'classe') {
+            <div class="champ-f large">
+              <label for="an-classe">Classe</label>
+              <select id="an-classe" formControlName="classeId">
+                <option [ngValue]="0">Choisir une classe</option>
+                @for (c of classes(); track c.id) { <option [ngValue]="c.id">{{ c.nom }}{{ c.anneeUniversitaire ? ' · ' + c.anneeUniversitaire : '' }}</option> }
+              </select>
+            </div>
+          }
+          @if (portee() === 'etudiant') {
+            <div class="champ-f large">
+              <label for="an-etu">Étudiant</label>
+              <select id="an-etu" formControlName="etudiantId">
+                <option [ngValue]="0">Choisir un étudiant</option>
+                @for (e of etudiants(); track e.id) { <option [ngValue]="e.id">{{ e.nom }} {{ e.prenom }} · {{ e.matricule }}</option> }
+              </select>
+            </div>
+          }
+        </form>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn indigo" type="button" [disabled]="enCours()" (click)="lancerAnalyse()">{{ enCours() ? 'Analyse en cours…' : 'Lancer l\'analyse' }}</button>
+        </div>
+      } @else if (resultat(); as r) {
+        @if (bilan(); as b) {
+          <p class="bandeau ok" role="status">Analyse terminée pour le {{ nomSemestre()(r.semestreId) }}.</p>
+          <div class="bilan">
+            <div><strong class="chiffres">{{ r.analyses }}</strong><span>étudiant{{ r.analyses > 1 ? 's' : '' }} analysé{{ r.analyses > 1 ? 's' : '' }}</span></div>
+            <div><strong class="chiffres">{{ r.alertesCreees }}</strong><span>nouvelle{{ r.alertesCreees > 1 ? 's' : '' }} alerte{{ r.alertesCreees > 1 ? 's' : '' }}</span></div>
+            <div class="niveaux-bilan">
+              <span><span class="niveau ELEVE">ÉLEVÉ</span> {{ b.eleve }}</span>
+              <span><span class="niveau MOYEN">MOYEN</span> {{ b.moyen }}</span>
+              <span><span class="niveau FAIBLE">FAIBLE</span> {{ b.faible }}</span>
+            </div>
+          </div>
+          @if (r.avertissements.length) {
+            <div class="avertissements">
+              <strong>{{ r.avertissements.length }} étudiant{{ r.avertissements.length > 1 ? 's n\'ont' : ' n\'a' }} pas pu être analysé{{ r.avertissements.length > 1 ? 's' : '' }} :</strong>
+              <ul>@for (a of r.avertissements; track $index) { <li>{{ a }}</li> }</ul>
+            </div>
+          }
+          @if (r.predictions.length === 1) {
+            <h3 class="sous-titre-modal">{{ r.predictions[0].etudiantNom }} · {{ pourcent(r.predictions[0].probabilite) }} <span [class]="'niveau ' + r.predictions[0].niveau">{{ libelleNiveau(r.predictions[0].niveau) }}</span></h3>
+            <app-facteurs [facteurs]="r.predictions[0].facteurs" />
+          } @else if (b.aSuivre.length) {
+            <h3 class="sous-titre-modal">Situations à examiner ({{ b.aSuivre.length }})</h3>
+            <ul class="a-suivre">
+              @for (p of b.aSuivre; track p.id) {
+                <li>
+                  <span class="nom">{{ p.etudiantNom }}</span>
+                  <span class="score"><strong>{{ pourcent(p.probabilite) }}</strong><span [class]="'niveau ' + p.niveau">{{ libelleNiveau(p.niveau) }}</span></span>
+                  @if (p.alerteId) { <a class="lien" [routerLink]="['/alertes', p.alerteId]" (click)="fermer()">Alerte n° {{ p.alerteId }}</a> }
+                </li>
+              }
+            </ul>
+          }
+        }
+        <div class="pied">
+          @if (r.predictions.length === 1 && r.predictions[0].alerteId) { <a class="btn clair" [routerLink]="['/alertes', r.predictions[0].alerteId]" (click)="fermer()">Ouvrir l'alerte</a> }
+          <button class="btn indigo" type="button" (click)="fermer()">Terminé</button>
+        </div>
+      }
+    </app-modal>
+  }
+}

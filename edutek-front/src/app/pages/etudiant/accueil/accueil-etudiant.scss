@@ -1,0 +1,9 @@
+a.carte { display: block; color: inherit; }
+.avert { margin: 12px 0 0; }
+.duo > .carte > .ligne:first-child { margin-bottom: 12px; }
+.duo h2 { font-size: 16.5px; }
+.vide-liste { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.liste .pastille { width: 34px; height: 34px; border-radius: 10px; }
+.liste a.puce { white-space: nowrap; }
+.recos .corps span { display: block; margin-top: 3px; line-height: 1.5; color: var(--muted); font-size: 13.5px; }
+.liste .note-val { font-size: 17px; }

@@ -1,0 +1,95 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Enseignement</p>
+    <h1>Faire l'appel</h1>
+    <p class="intro">Choisissez votre classe et la séance, puis cochez les présents. Enregistrer l'appel vaut pointage de la séance : vous n'avez rien d'autre à déclarer au service financier.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/mes-pointages"><app-icon nom="time" [taille]="18" />Mes pointages</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement()) {
+  <p class="vide">Chargement de vos séances…</p>
+} @else {
+  <div class="onglets rise" style="animation-delay: .08s" role="tablist" aria-label="Classe">
+    <button type="button" role="tab" [class.actif]="classeChoisie() === null" [attr.aria-selected]="classeChoisie() === null" (click)="choisirClasse(null)">Toutes mes classes</button>
+    @for (c of mesClasses(); track c.id) {
+      <button type="button" role="tab" [class.actif]="classeChoisie() === c.id" [attr.aria-selected]="classeChoisie() === c.id" (click)="choisirClasse(c.id)">{{ c.nom }}</button>
+    }
+  </div>
+
+  <div class="grille">
+    <section class="carte bloc rise" style="animation-delay: .14s">
+      <div class="ligne"><h2>Aujourd'hui · {{ dateFr(auj) }}</h2></div>
+      @if (duJour().length) {
+        <ul class="liste">
+          @for (l of duJour(); track l.seance.id) {
+            <li>
+              <div class="infos">
+                <strong>{{ l.matiere }}</strong>
+                <span class="gris">{{ l.classe }} · {{ horaire(l.seance) }}{{ l.seance.salle ? ' · salle ' + l.seance.salle : '' }}</span>
+              </div>
+              <span class="puce" [class.vert]="etat(l).classe === 'vert'" [class.orange]="etat(l).classe === 'orange'" [class.gris]="etat(l).classe === 'gris'">{{ etat(l).texte }}</span>
+              <button class="btn indigo petit" type="button" (click)="ouvrir(l)"><app-icon nom="checkbox" [taille]="17" />{{ l.pointes ? 'Voir la feuille' : 'Faire l\'appel' }}</button>
+            </li>
+          }
+        </ul>
+      } @else {
+        <p class="note">Aucune séance prévue aujourd'hui{{ classeChoisie() !== null ? ' pour cette classe' : '' }}. Vous faites cours maintenant ? Démarrez la séance ci-contre.</p>
+      }
+    </section>
+
+    <section class="carte bloc rise" style="animation-delay: .2s">
+      <h2>Démarrer une séance maintenant</h2>
+      <p class="note">La séance est créée pour aujourd'hui{{ semestreCourant() ? ' (' + semestreCourant()!.nom + ')' : '' }} et la feuille d'appel s'ouvre aussitôt.</p>
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="demarrer()" novalidate>
+        <div class="champ-f large">
+          <label for="a-ens">Enseignement</label>
+          <select id="a-ens" formControlName="enseignementId">
+            <option [value]="0" disabled>Choisir la matière et la classe</option>
+            @for (o of optionsEnseignement(); track o.id) { <option [value]="o.id">{{ o.libelle }}</option> }
+          </select>
+        </div>
+        <div class="champ-f"><label for="a-deb">Début</label><input id="a-deb" type="time" formControlName="heureDebut"></div>
+        <div class="champ-f"><label for="a-fin">Fin</label><input id="a-fin" type="time" formControlName="heureFin"></div>
+        <div class="champ-f large"><label for="a-salle">Salle (facultatif)</label><input id="a-salle" formControlName="salle" placeholder="ex. B12"></div>
+      </form>
+      <div class="pied"><button class="btn indigo" type="button" [disabled]="creation()" (click)="demarrer()"><app-icon nom="play" [taille]="17" />{{ creation() ? 'Création…' : 'Démarrer et faire l\'appel' }}</button></div>
+    </section>
+  </div>
+
+  <section class="carte bloc rise" style="animation-delay: .26s">
+    <div class="ligne"><h2>Appels en retard</h2><span class="note">30 derniers jours</span></div>
+    @if (enRetard().length) {
+      <ul class="liste">
+        @for (l of enRetard(); track l.seance.id) {
+          <li>
+            <div class="infos">
+              <strong>{{ l.matiere }}</strong>
+              <span class="gris">{{ l.classe }} · {{ dateFr(l.seance.date) }} · {{ horaire(l.seance) }}</span>
+            </div>
+            <span class="puce orange">{{ etat(l).texte }}</span>
+            <button class="btn clair petit" type="button" (click)="ouvrir(l)"><app-icon nom="checkbox" [taille]="17" />Compléter l'appel</button>
+          </li>
+        }
+      </ul>
+    } @else { <p class="note">Tous les appels des 30 derniers jours sont faits.</p> }
+  </section>
+
+  @if (aVenir().length) {
+    <section class="carte bloc rise" style="animation-delay: .32s">
+      <h2>Prochaines séances</h2>
+      <ul class="liste">
+        @for (l of aVenir(); track l.seance.id) {
+          <li>
+            <div class="infos"><strong>{{ l.matiere }}</strong><span class="gris">{{ l.classe }} · {{ dateFr(l.seance.date) }} · {{ horaire(l.seance) }}</span></div>
+            <span class="puce gris">À venir</span>
+          </li>
+        }
+      </ul>
+    </section>
+  }
+}

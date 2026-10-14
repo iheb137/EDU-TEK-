@@ -1,0 +1,66 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Administration · {{ auth.session()?.etablissement }}</p>
+    <h1>Administrateurs</h1>
+    <p class="intro">Les comptes d'administration de l'établissement et leur périmètre. La création, l'activation, les rôles et les mots de passe se gèrent depuis l'écran Utilisateurs.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/roles"><app-icon nom="shield-checkmark" [taille]="18" />Rôles et permissions</a>
+    <a class="btn indigo" routerLink="/utilisateurs" [queryParams]="{ creer: 1 }"><app-icon nom="person-add" [taille]="18" />Créer un administrateur</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (parRole().length) {
+  <section class="resume rise" style="animation-delay: .08s" aria-label="Répartition par rôle">
+    @for (r of parRole(); track r[0]) {
+      <button type="button" class="carte pave" [class.actif]="role() === r[0]" [attr.aria-pressed]="role() === r[0]" (click)="role.set(role() === r[0] ? '' : r[0])">
+        <span class="chiffre">{{ r[1] }}</span><span class="libelle">{{ libelleRole(r[0]) }}</span>
+      </button>
+    }
+  </section>
+}
+
+<div class="filtres rise" style="animation-delay: .12s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Rechercher par nom ou e-mail" aria-label="Rechercher un administrateur" [value]="filtre()" (input)="filtre.set($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Filtrer par rôle" (change)="role.set($any($event.target).value)">
+    <option value="">Tous les rôles</option>
+    @for (r of rolesPresents(); track r) { <option [value]="r" [selected]="r === role()">{{ libelleRole(r) }}</option> }
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !liste()) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste()) {
+    @if (visibles().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Administrateur</th><th>Rôles</th><th>Téléphone</th><th>État</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (a of visibles(); track a.id) {
+              <tr>
+                <td><span class="nom">{{ a.prenom }} {{ a.nom }}</span>@if (a.email === auth.session()?.email) { <span class="puce vous">Vous</span> }<br><span class="gris">{{ a.email }}</span></td>
+                <td><div class="puces">@for (r of a.roles; track r) { <span class="puce">{{ libelleRole(r) }}</span> }</div></td>
+                <td class="gris">{{ a.telephone || '—' }}</td>
+                <td><span class="puce" [class.vert]="a.actif" [class.gris]="!a.actif">{{ a.actif ? 'Actif' : 'Inactif' }}</span></td>
+                <td>
+                  <div class="actions">
+                    <a class="icone" routerLink="/utilisateurs" title="Gérer ce compte dans Utilisateurs" [attr.aria-label]="'Gérer le compte de ' + a.email" [queryParams]="{ q: a.email }"><app-icon nom="open" [taille]="19" /></a>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination"><span>{{ visibles().length }} administrateur{{ visibles().length > 1 ? 's' : '' }}@if (visibles().length !== liste()!.length) { sur {{ liste()!.length }} }</span></div>
+    } @else {
+      <p class="vide">{{ liste()!.length ? 'Aucun administrateur ne correspond à cette recherche.' : 'Aucun administrateur pour le moment.' }}</p>
+    }
+  }
+</section>

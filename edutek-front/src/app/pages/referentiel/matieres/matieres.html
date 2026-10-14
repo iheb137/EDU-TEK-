@@ -1,0 +1,118 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Référentiel pédagogique</p>
+    <h1>Matières</h1>
+    <p class="intro">Matières enseignées dans chaque semestre, avec leur coefficient dans la moyenne et les crédits qu'elles rapportent.</p>
+  </div>
+  @if (peutEcrire) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="nouvelle()"><app-icon nom="add" [taille]="18" />Nouvelle matière</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .06s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Rechercher par code ou intitulé" aria-label="Rechercher une matière" [value]="recherche()" (input)="recherche.set($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Filtrer par semestre" (change)="filtrer($any($event.target).value)">
+    <option value="" [selected]="!filtreSemestre()">Tous les semestres</option>
+    @for (g of groupes(); track g.formation.id) {
+      <optgroup [label]="g.formation.code">
+        @for (s of g.semestres; track s.id) { <option [value]="s.id" [selected]="filtreSemestre() === s.id">{{ s.nom }}</option> }
+      </optgroup>
+    }
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .12s">
+  @if (chargement() && !matieres().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (lignes().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Code</th><th>Intitulé</th><th>Semestre</th><th class="num">Coefficient</th><th class="num">Crédits</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (m of lignes(); track m.id) {
+            <tr>
+              <td><span class="code">{{ m.code }}</span></td>
+              <td><span class="nom">{{ m.nom }}</span></td>
+              <td class="gris">{{ m.semestre?.nom ?? '—' }}</td>
+              <td class="num">{{ nombre(m.coefficient) || '—' }}</td>
+              <td class="num">{{ m.credits ?? '—' }}</td>
+              <td>
+                @if (peutEcrire) {
+                  <div class="actions">
+                    <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier la matière ' + m.code" (click)="modifier(m)"><app-icon nom="pencil" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer la matière ' + m.code" (click)="demanderSuppression(m)"><app-icon nom="trash" [taille]="19" /></button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span>{{ lignes().length }} matière{{ lignes().length > 1 ? 's' : '' }}</span>
+      @if (filtreSemestre()) { <span>Total du semestre : {{ totaux().credits }} crédits · coefficients {{ nombre(totaux().coefficients) }}</span> }
+    </div>
+  } @else {
+    <p class="vide">{{ recherche() || filtreSemestre() ? 'Aucune matière ne correspond à ces critères.' : 'Aucune matière n\'est encore définie.' }}</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('editer') {
+    <app-modal [titre]="cible() ? 'Modifier la matière' : 'Nouvelle matière'" [largeur]="580" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f">
+          <label for="ma-code">Code</label>
+          <input id="ma-code" formControlName="code" placeholder="ex. ARCH-S9" autocomplete="off">
+          @if (formulaire.controls.code.touched && formulaire.controls.code.invalid) { <span class="erreur-champ">Code obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="ma-sem">Semestre</label>
+          <select id="ma-sem" formControlName="semestreId">
+            <option [ngValue]="null" disabled>Choisir un semestre</option>
+            @for (g of groupes(); track g.formation.id) {
+              <optgroup [label]="g.formation.code">
+                @for (s of g.semestres; track s.id) { <option [ngValue]="s.id">{{ s.nom }}</option> }
+              </optgroup>
+            }
+          </select>
+          @if (formulaire.controls.semestreId.touched && formulaire.controls.semestreId.invalid) { <span class="erreur-champ">Choisissez un semestre.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="ma-nom">Intitulé</label>
+          <input id="ma-nom" formControlName="nom" autocomplete="off">
+          @if (formulaire.controls.nom.touched && formulaire.controls.nom.invalid) { <span class="erreur-champ">Intitulé obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="ma-coef">Coefficient</label>
+          <input id="ma-coef" type="number" min="0.1" step="0.5" formControlName="coefficient">
+          @if (formulaire.controls.coefficient.touched && formulaire.controls.coefficient.invalid) { <span class="erreur-champ">Coefficient positif obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="ma-cred">Crédits</label>
+          <input id="ma-cred" type="number" min="0" step="1" formControlName="credits">
+          @if (formulaire.controls.credits.touched && formulaire.controls.credits.invalid) { <span class="erreur-champ">Nombre entre 0 et 60.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-confirmation titre="Supprimer la matière" [message]="'Supprimer la matière « ' + cible()?.nom + ' » (' + cible()?.code + ') ?'"
+      detail="La suppression est refusée tant que des enseignements y sont rattachés."
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="supprimer()" (fermer)="fermer()" />
+  }
+}

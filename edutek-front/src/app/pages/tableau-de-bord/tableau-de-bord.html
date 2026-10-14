@@ -1,0 +1,110 @@
+@if (!pedagogie) {
+  <div class="entete rise">
+    <div>
+      <p class="surtitre">Bienvenue</p>
+      <h1>{{ auth.nomComplet() }}</h1>
+      <p class="intro">Votre espace est en cours de construction. Les écrans dédiés à votre profil arrivent dans les prochaines étapes.</p>
+    </div>
+  </div>
+} @else {
+  <div class="entete rise">
+    <div>
+      <p class="surtitre">{{ semestre()?.nom ?? 'Semestre' }}</p>
+      <h1>Tableau de bord pédagogique</h1>
+      <p class="intro">Suivi de la promotion et alertes issues de l'analyse du risque. Le score aide à repérer les situations ; la décision reste celle de l'équipe pédagogique.</p>
+    </div>
+    <div class="boutons">
+      @if (semestres().length > 1) {
+        <label class="choix">
+          <span class="visuel-cache">Semestre</span>
+          <select (change)="choisir($any($event.target).value)" [value]="semestreId()">
+            @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestreId()">{{ s.nom }}</option> }
+          </select>
+        </label>
+      }
+      <button class="btn indigo" type="button" (click)="lancerAnalyse()" [disabled]="analyse() || semestreId() === null">
+        <app-icon nom="play" [taille]="17" />{{ analyse() ? 'Analyse en cours…' : 'Lancer l\'analyse du semestre' }}
+      </button>
+    </div>
+  </div>
+
+  @if (erreur() && etat() !== 'erreur') { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+  @switch (etat()) {
+    @case ('chargement') { <p class="vide rise">Chargement des données…</p> }
+    @case ('erreur') { <div class="vide rise" role="alert"><strong>Impossible de charger le tableau de bord.</strong><span>{{ erreur() }}</span></div> }
+    @case ('sans-semestre') {
+      <div class="vide rise"><strong>Aucun semestre défini.</strong><span>Créez une formation et un semestre pour commencer le suivi.</span></div>
+    }
+    @case ('sans-analyse') {
+      <div class="vide rise">
+        <strong>Aucune analyse pour ce semestre.</strong>
+        <span>Lancez l'analyse pour calculer le risque des étudiants (il faut des notes et des présences enregistrées).</span>
+      </div>
+    }
+    @default {
+      <section class="indicateurs" aria-label="Indicateurs">
+        @for (k of indicateurs(); track k.titre; let i = $index) {
+          <article class="carte rise" [style.animation-delay]="delai(i)">
+            <div class="ligne"><span class="titre">{{ k.titre }}</span><span class="pastille" [style.background]="k.couleur"><app-icon [nom]="k.icone" [taille]="21" /></span></div>
+            <div class="valeur">{{ k.valeur }}</div>
+            <div class="note">{{ k.note }}</div>
+          </article>
+        }
+      </section>
+
+      <div class="duo">
+        <section class="carte rise grand" style="animation-delay: .45s">
+          <div class="ligne"><h2>Facteurs de risque les plus fréquents</h2>@if (donnees()?.derniereAnalyse) { <span class="note">Analyse du {{ date(donnees()?.derniereAnalyse) }}</span> }</div>
+          @if (facteurs().length) {
+            <div class="facteurs">
+              @for (f of facteurs(); track f.nom; let i = $index) {
+                <div class="facteur">
+                  <div class="ligne"><span>{{ f.nom }}</span><span class="note">{{ f.occurrences }} étudiant{{ f.occurrences > 1 ? 's' : '' }}</span></div>
+                  <div class="piste"><div class="remplissage" [style.width.%]="f.part" style="background:#3d5bd6" [style.animation-delay]="delai(i, 0.7)"></div></div>
+                </div>
+              }
+            </div>
+          } @else { <p class="note">Aucun facteur enregistré pour cette analyse.</p> }
+        </section>
+
+        <section class="carte rise petit" style="animation-delay: .55s">
+          <h2>Répartition par niveau de risque</h2>
+          <p class="note">Étudiants analysés sur le semestre</p>
+          <div class="niveaux">
+            @for (n of niveaux(); track n.nom; let i = $index) {
+              <div>
+                <div class="ligne"><strong>{{ n.nom }}</strong><span class="note">{{ n.effectif }} étudiant{{ n.effectif > 1 ? 's' : '' }}</span></div>
+                <div class="piste"><div class="remplissage" [style.width.%]="n.part" [style.background]="n.couleur" [style.animation-delay]="delai(i, 0.9)"></div></div>
+              </div>
+            }
+          </div>
+          <a class="lien" routerLink="/classes">Voir le détail par classe <app-icon nom="arrow-forward" [taille]="16" /></a>
+        </section>
+      </div>
+
+      <section class="carte rise alertes" style="animation-delay: .65s">
+        <div class="ligne tete"><h2>Alertes à traiter en priorité</h2><a class="lien" routerLink="/alertes">Toutes les alertes <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+        @if (alertes().length) {
+          <div class="defile">
+            <table>
+              <thead><tr><th>Étudiant</th><th>Probabilité</th><th>Niveau</th><th>Détectée le</th><th>Actions</th><th>Statut</th></tr></thead>
+              <tbody>
+                @for (a of alertes(); track a.id) {
+                  <tr>
+                    <td><span class="code">{{ a.etudiantNom }}</span><br><span class="gris">{{ a.etudiantMatricule }}</span></td>
+                    <td><div class="proba"><div class="piste fine"><div class="remplissage" [style.width.%]="a.score * 100" [class]="'remplissage ' + a.niveau"></div></div><strong>{{ pourcent(a.score) }}</strong></div></td>
+                    <td><span class="niveau" [class]="'niveau ' + a.niveau">{{ libelleNiveau(a.niveau) }}</span></td>
+                    <td class="gris">{{ date(a.dateDetection) }}</td>
+                    <td class="gris">{{ a.nbActions }}</td>
+                    <td class="statut">{{ libelleStatut(a.statut) }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else { <p class="note">Aucune alerte ouverte pour ce semestre.</p> }
+      </section>
+    }
+  }
+}

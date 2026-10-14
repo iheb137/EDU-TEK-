@@ -1,0 +1,192 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Pédagogie</p>
+    <h1>Résultats du semestre</h1>
+    <p class="intro">Vérifiez que chaque enseignement est clôturé, calculez les moyennes, décisions et rangs, contrôlez les statistiques puis publiez les résultats aux étudiants.</p>
+  </div>
+  <div class="boutons">
+    <select class="champ" aria-label="Semestre" (change)="choisirSemestre($any($event.target).value)">
+      @for (s of ref.semestres(); track s.id) { <option [value]="s.id" [selected]="semestre() === s.id">{{ s.nom }}</option> }
+    </select>
+    <button class="btn indigo" type="button" [disabled]="!resultats()?.length || toutPublie() || aRecalculer()"
+      [title]="!resultats()?.length ? 'Calculez d\'abord les résultats' : aRecalculer() ? 'Des résultats sont à recalculer' : toutPublie() ? 'Résultats déjà publiés' : ''"
+      (click)="ouvrir('publier')"><app-icon nom="megaphone" [taille]="18" />Publier les résultats</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement() && !avancement()) {
+  <p class="vide">Chargement…</p>
+} @else if (!semestre()) {
+  <p class="vide">Aucun semestre n'est encore défini.</p>
+} @else if (avancement(); as av) {
+  <div class="etapes rise" style="animation-delay: .06s">
+    <div class="etape" [class.faite]="toutCloture()"><span class="pastille">1</span><div><strong>Clôture des enseignements</strong><span>{{ nbClotures() }} / {{ av.length }} clôturé{{ nbClotures() > 1 ? 's' : '' }}</span></div></div>
+    <div class="etape" [class.faite]="!!resultats()?.length && !aRecalculer()"><span class="pastille">2</span><div><strong>Calcul des résultats</strong><span>{{ resultats()?.length ? (aRecalculer() ? 'À recalculer' : resultats()!.length + ' étudiant(s)') : 'Non calculés' }}</span></div></div>
+    <div class="etape" [class.faite]="toutPublie()"><span class="pastille">3</span><div><strong>Publication</strong><span>{{ toutPublie() ? 'Publiés' : (statuts()['PUBLIE'] ? statuts()['PUBLIE'] + ' publié(s)' : 'Non publiés') }}</span></div></div>
+  </div>
+
+  <section class="carte section rise" style="animation-delay: .1s">
+    <header>
+      <div>
+        <h2>Avancement de la clôture</h2>
+        <p>Le calcul n'est possible que lorsque tous les enseignements de {{ nomSemestre() }} sont clôturés (toutes les notes soumises).</p>
+      </div>
+      <button class="btn indigo" type="button" [disabled]="!toutCloture()" [title]="toutCloture() ? '' : 'Tous les enseignements doivent être clôturés'" (click)="ouvrir('calculer')">
+        <app-icon nom="calculator" [taille]="18" />{{ resultats()?.length ? 'Recalculer les résultats' : 'Calculer les résultats et les rangs' }}
+      </button>
+    </header>
+    @if (av.length) {
+      <div class="jauge-globale" [attr.aria-label]="nbClotures() + ' enseignements clôturés sur ' + av.length"><span [style.width.%]="nbClotures() / av.length * 100"></span></div>
+      <div class="defile">
+        <table class="compact">
+          <thead><tr><th>Matière</th><th>Classe</th><th>Enseignant</th><th class="num">Brouillons</th><th class="num">Soumises</th><th>État</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (a of av; track a.enseignementId) {
+              <tr>
+                <td><a class="nom lien" [routerLink]="['/evaluations']" [queryParams]="{ semestre: semestre(), enseignement: a.enseignementId }">{{ a.matiere }}</a></td>
+                <td>{{ a.classe }}</td>
+                <td>{{ a.enseignant }}</td>
+                <td class="num" [class.orange-t]="a.brouillons > 0">{{ a.brouillons }}</td>
+                <td class="num">{{ a.soumises }}</td>
+                <td>@if (a.cloture) { <span class="puce vert">Clôturé</span> } @else { <span class="puce orange">Saisie ouverte</span> }</td>
+                <td>
+                  <div class="actions">
+                    @if (a.cloture) {
+                      <button class="icone" type="button" title="Rouvrir la saisie" [attr.aria-label]="'Rouvrir la saisie : ' + a.matiere + ' ' + a.classe" (click)="ouvrir('rouvrir', a)"><app-icon nom="lock-open" [taille]="18" /></button>
+                    } @else {
+                      <button class="icone" type="button" [title]="a.brouillons ? 'Des notes sont en brouillon' : 'Clôturer l\'enseignement'" [attr.aria-label]="'Clôturer : ' + a.matiere + ' ' + a.classe" [disabled]="a.brouillons > 0" (click)="ouvrir('cloturer', a)"><app-icon nom="lock-closed" [taille]="18" /></button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="vide compacte">Aucun enseignement n'est rattaché à ce semestre.</p>
+    }
+  </section>
+
+  @if (stats(); as st) {
+    <section class="carte section rise" style="animation-delay: .14s">
+      <header>
+        <div><h2>Statistiques du semestre</h2><p>Filière entière · seuil de réussite {{ nombre(st.seuilReussite) }} / {{ nombre(st.noteMax) }}</p></div>
+        <div class="puces">
+          @for (d of decisionsListe(); track d[0]) { <span class="puce" [class]="'puce ' + classeDecision(d[0])">{{ decision(d[0]) }} : {{ d[1] }}</span> }
+        </div>
+      </header>
+      <div class="stats-grille">
+        <app-bloc-stats [stats]="st.filiere" [seuil]="st.seuilReussite" [noteMax]="st.noteMax" />
+        @if (st.classes.length) {
+          <div class="defile par-classe">
+            <table class="compact">
+              <thead><tr><th>Classe</th><th class="num">Effectif</th><th class="num">Moyenne</th><th class="num">Médiane</th><th class="num">Min – max</th><th class="num">Réussite</th></tr></thead>
+              <tbody>
+                @for (c of st.classes; track c.classeId) {
+                  <tr>
+                    <td class="nom">{{ c.code }}</td>
+                    <td class="num">{{ c.stats.effectif }}</td>
+                    <td class="num">{{ nombre(c.stats.moyenne) }}</td>
+                    <td class="num">{{ nombre(c.stats.mediane) }}</td>
+                    <td class="num">{{ nombre(c.stats.min) }} – {{ nombre(c.stats.max) }}</td>
+                    <td class="num">{{ c.stats.tauxReussite === null ? '–' : nombre(c.stats.tauxReussite, 1) + ' %' }}</td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        }
+      </div>
+    </section>
+  }
+
+  <section class="carte section rise" style="animation-delay: .18s">
+    <header>
+      <div><h2>Résultats par étudiant</h2><p>Moyenne pondérée, crédits sur {{ creditsSemestre() }}, décision et rangs dans la classe et la filière.</p></div>
+      @if (resultats()?.length) {
+        <div class="boutons">
+          <select class="champ" aria-label="Filtrer par classe" (change)="classe.set($any($event.target).value ? +$any($event.target).value : null)">
+            <option value="">Toutes les classes</option>
+            @for (c of ref.classes(); track c.id) { <option [value]="c.id">{{ c.nom }}</option> }
+          </select>
+          <div class="recherche petite"><app-icon nom="search" [taille]="17" /><input type="search" placeholder="Nom ou matricule" aria-label="Rechercher un étudiant" (input)="recherche.set($any($event.target).value)"></div>
+          <button class="btn clair" type="button" (click)="exporter()"><app-icon nom="download" [taille]="18" />Exporter</button>
+        </div>
+      }
+    </header>
+    @if (resultats()?.length) {
+      <div class="defile">
+        <table class="compact">
+          <thead><tr><th class="num">Rang</th><th>Étudiant</th><th>Classe</th><th class="num">Moyenne</th><th class="num">Crédits</th><th>Décision</th><th class="num">Rang classe</th><th>Statut</th></tr></thead>
+          <tbody>
+            @for (x of lignes(); track x.r.id) {
+              <tr>
+                <td class="num nom">@if (x.r.rangFiliere) { {{ x.r.rangFiliere }}<span class="gris petit">/{{ x.r.effectifFiliere }}</span>} @else {–}</td>
+                <td><span class="nom">{{ x.et ? x.et.nom + ' ' + x.et.prenom : 'Étudiant n° ' + x.r.etudiantId }}</span><br><span class="gris petit">{{ x.et?.matricule }}</span></td>
+                <td>{{ ref.classesParId().get(x.et?.classeId ?? 0)?.nom ?? '–' }}</td>
+                <td class="num nom" [class.rouge-t]="x.r.moyenne !== null && stats() && x.r.moyenne < stats()!.seuilReussite">{{ nombre(x.r.moyenne) || '–' }}</td>
+                <td class="num">{{ x.r.creditsObtenus ?? '–' }}</td>
+                <td><span [class]="'puce ' + classeDecision(x.r.decision)">{{ decision(x.r.decision) || '–' }}</span></td>
+                <td class="num">@if (x.r.rangClasse) { {{ x.r.rangClasse }}<span class="gris petit">/{{ x.r.effectifClasse }}</span>} @else {–}</td>
+                <td><span class="puce" [class.vert]="x.r.statut === 'PUBLIE'" [class.orange]="x.r.statut === 'A_RECALCULER'" [class.gris]="x.r.statut !== 'PUBLIE' && x.r.statut !== 'A_RECALCULER'">{{ statut(x.r.statut) }}</span></td>
+              </tr>
+            } @empty {
+              <tr><td colspan="8" class="gris">Aucun résultat ne correspond à ces critères.</td></tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="vide compacte">Aucun résultat calculé pour {{ nomSemestre() }}.@if (!toutCloture()) { Clôturez d'abord tous les enseignements, puis lancez le calcul. }</p>
+    }
+  </section>
+}
+
+@switch (fenetre()) {
+  @case ('calculer') {
+    <app-modal titre="Calculer les résultats" [largeur]="520" (fermer)="fermer()">
+      <p class="texte">Les moyennes, décisions, crédits et rangs (classe et filière) de <strong>{{ nomSemestre() }}</strong> vont être calculés à partir des notes soumises.</p>
+      @if (resultats()?.length) { <p class="texte alerte">Des résultats existent déjà : ils seront remplacés.@if (statuts()['PUBLIE']) { Les résultats déjà publiés devront être republiés. }</p> }
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="calculer()">{{ enCours() ? 'Calcul…' : 'Calculer' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('publier') {
+    <app-modal titre="Publier les résultats" [largeur]="540" (fermer)="fermer()">
+      <p class="texte">Les résultats de <strong>{{ nomSemestre() }}</strong> ({{ resultats()?.length }} étudiant{{ (resultats()?.length ?? 0) > 1 ? 's' : '' }}) deviendront visibles dans le bulletin de chaque étudiant, qui recevra une notification.</p>
+      <p class="texte alerte">Cette action est irréversible : vérifiez les statistiques et les décisions avant de publier.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="publier()">{{ enCours() ? 'Publication…' : 'Publier' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('cloturer') {
+    <app-modal titre="Clôturer l'enseignement" [largeur]="520" (fermer)="fermer()">
+      <p class="texte">Clôturer <strong>{{ cible()?.matiere }} · {{ cible()?.classe }}</strong> ({{ cible()?.enseignant }}) verrouille la saisie de toutes ses évaluations.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="cloturer()">{{ enCours() ? 'Clôture…' : 'Clôturer' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('rouvrir') {
+    <app-modal titre="Rouvrir la saisie" [largeur]="520" (fermer)="fermer()">
+      <p class="texte">La saisie de <strong>{{ cible()?.matiere }} · {{ cible()?.classe }}</strong> redeviendra possible. Les résultats déjà calculés passeront à l'état « à recalculer ».</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="rouvrir()">{{ enCours() ? 'Réouverture…' : 'Rouvrir' }}</button>
+      </div>
+    </app-modal>
+  }
+}

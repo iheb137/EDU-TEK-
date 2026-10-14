@@ -1,0 +1,13 @@
+.etat-saisie { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: #ddf5ec; color: #0f6b4f; font-size: 13.5px; font-weight: 600;
+  &.close { background: #eceff6; color: #3d4a6b; } }
+.avancement { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+.avancement .nom { display: inline-flex; align-items: center; font-size: 14px; }
+.barre { margin-top: 8px; height: 10px; border-radius: 6px; background: #eceff6; overflow: hidden; display: flex; }
+.barre span { height: 100%; }
+.soumises { background: var(--teal, #12a37f); }
+.brouillons { background: #f0b429; }
+.manquantes { background: #d5dbea; }
+.legende { margin-top: 6px; display: flex; gap: 16px; flex-wrap: wrap; font-size: 12.5px; color: var(--muted); }
+.legende span { display: inline-flex; align-items: center; gap: 6px; }
+.pastille { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.filtres select.champ { max-width: 240px; }

@@ -8,4 +8,5 @@ public interface EnseignementRepository extends JpaRepository<Enseignement, Long
     List<Enseignement> findBySemestreId(Long semestreId);
     List<Enseignement> findByClasseIdAndSemestreId(Long classeId, Long semestreId);
     List<Enseignement> findByEnseignantEmail(String email);
+    List<Enseignement> findByClasseId(Long classeId);
 }

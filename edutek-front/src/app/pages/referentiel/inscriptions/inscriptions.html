@@ -1,0 +1,113 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Référentiel pédagogique</p>
+    <h1>Inscriptions</h1>
+    <p class="intro">Inscription administrative de chaque étudiant à une formation, avec son statut (active, suspendue, terminée ou annulée).</p>
+  </div>
+  @if (peutEcrire) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="nouvelle()"><app-icon nom="add" [taille]="18" />Nouvelle inscription</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .06s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Nom ou matricule de l'étudiant" aria-label="Rechercher une inscription" [value]="recherche()" (input)="chercher($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Filtrer par formation" (change)="filtrerFormation($any($event.target).value)">
+    <option value="">Toutes les formations</option>
+    @for (f of formationsTriees(); track f.id) { <option [value]="f.id">{{ f.code }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par statut" (change)="filtrerStatut($any($event.target).value)">
+    <option value="">Tous les statuts</option>
+    @for (s of statuts; track s.valeur) { <option [value]="s.valeur">{{ s.libelle }}</option> }
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .12s">
+  @if (chargement() && !inscriptions().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (lignes().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Étudiant</th><th>Matricule</th><th>Formation</th><th>Date d'inscription</th><th>Statut</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (i of lignes(); track i.id) {
+            <tr>
+              <td>@if (i.etudiant) { <a class="lien" [routerLink]="['/etudiants', i.etudiantId]">{{ i.etudiant.nom }} {{ i.etudiant.prenom }}</a> } @else { <span class="gris">Étudiant n° {{ i.etudiantId }}</span> }</td>
+              <td>@if (i.etudiant) { <span class="code">{{ i.etudiant.matricule }}</span> }</td>
+              <td>{{ i.formation?.code ?? '—' }}</td>
+              <td class="gris">{{ date(i.dateInscription) || '—' }}</td>
+              <td><span class="puce" [class]="statut(i.statut).classe">{{ statut(i.statut).libelle }}</span></td>
+              <td>
+                @if (peutEcrire) {
+                  <div class="actions">
+                    <button class="icone" type="button" title="Modifier le statut" [attr.aria-label]="'Modifier l\'inscription de ' + (i.etudiant?.prenom ?? '') + ' ' + (i.etudiant?.nom ?? '')" (click)="modifier(i)"><app-icon nom="pencil" [taille]="19" /></button>
+                    <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer l\'inscription de ' + (i.etudiant?.prenom ?? '') + ' ' + (i.etudiant?.nom ?? '')" (click)="demanderSuppression(i)"><app-icon nom="trash" [taille]="19" /></button>
+                  </div>
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span>{{ total() }} inscription{{ total() > 1 ? 's' : '' }} · page {{ numero() + 1 }} sur {{ pages() }}</span>
+      <div class="boutons">
+        <button class="icone" type="button" aria-label="Page précédente" [disabled]="numero() <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+        <button class="icone" type="button" aria-label="Page suivante" [disabled]="numero() + 1 >= pages()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+      </div>
+    </div>
+  } @else {
+    <p class="vide">{{ recherche() || filtreFormation() || filtreStatut() ? 'Aucune inscription ne correspond à ces critères.' : 'Aucune inscription enregistrée.' }}</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('editer') {
+    <app-modal [titre]="cible() ? 'Modifier l\'inscription' : 'Nouvelle inscription'" [largeur]="580" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="ins-etu">Étudiant</label>
+          <select id="ins-etu" formControlName="etudiantId">
+            <option [ngValue]="null" disabled>Choisir un étudiant</option>
+            @for (e of etudiantsTries(); track e.id) { <option [ngValue]="e.id">{{ e.nom }} {{ e.prenom }} · {{ e.matricule }}</option> }
+          </select>
+          @if (formulaire.controls.etudiantId.touched && formulaire.controls.etudiantId.invalid) { <span class="erreur-champ">Choisissez un étudiant.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="ins-form">Formation</label>
+          <select id="ins-form" formControlName="formationId">
+            <option [ngValue]="null" disabled>Choisir une formation</option>
+            @for (f of formationsTriees(); track f.id) { <option [ngValue]="f.id">{{ f.code }} · {{ f.nom }}</option> }
+          </select>
+          @if (cible()) { <span class="aide">L'étudiant et la formation d'une inscription existante ne sont pas modifiables.</span> }
+          @if (formulaire.controls.formationId.touched && formulaire.controls.formationId.invalid) { <span class="erreur-champ">Choisissez une formation.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="ins-statut">Statut</label>
+          <select id="ins-statut" formControlName="statut">
+            @for (s of statuts; track s.valeur) { <option [ngValue]="s.valeur">{{ s.libelle }}</option> }
+          </select>
+        </div>
+        <div class="champ-f"><label for="ins-date">Date d'inscription</label><input id="ins-date" type="date" formControlName="dateInscription"></div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-confirmation titre="Supprimer l'inscription" [message]="messageSuppression()"
+      detail="Pour garder une trace, préférez le statut « Annulée » ou « Terminée »."
+      [enCours]="enCours()" [erreur]="erreurFenetre()" (valider)="supprimer()" (fermer)="fermer()" />
+  }
+}

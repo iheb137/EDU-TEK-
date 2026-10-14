@@ -1,0 +1,89 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Scolarité</p>
+    <h1>Mes cours</h1>
+    <p class="intro">Les cours, TD et documents déposés par vos enseignants, matière par matière. Vous êtes notifié à chaque nouveau support.</p>
+  </div>
+  @if (semestres().length > 1) {
+    <div class="boutons">
+      <select class="champ" aria-label="Semestre" (change)="choisirSemestre(+$any($event.target).value)">
+        @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestre()">{{ s.nom }}</option> }
+      </select>
+    </div>
+  }
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement()) {
+  <section class="carte rise" style="margin-top:22px"><p class="vide">Chargement…</p></section>
+} @else if (!cours().length) {
+  <section class="carte rise" style="margin-top:22px">
+    <p class="vide">Aucune matière n'est encore rattachée à votre classe. Vos cours apparaîtront ici dès que vos enseignements seront programmés.</p>
+  </section>
+} @else {
+  <div class="espace rise" style="animation-delay: .1s">
+    <aside class="carte colonne" aria-label="Matières">
+      <ul class="enseignements" role="list">
+        @for (c of matieres(); track c.enseignementId) {
+          <li>
+            <button type="button" class="ens" [class.actif]="c.enseignementId === selection()" [attr.aria-current]="c.enseignementId === selection() ? 'true' : null" (click)="choisir(c.enseignementId)">
+              <span class="ens-nom">{{ c.matiereNom }}</span>
+              <span class="ens-sous">{{ c.enseignantNom }}@if (nouveau(c.dernierDepot)) { · <strong class="nouveau">nouveau</strong> }</span>
+              <span class="ens-compte" [class.zero]="!c.supports" [attr.aria-label]="c.supports + ' supports'">{{ c.supports }}</span>
+            </button>
+          </li>
+        }
+      </ul>
+    </aside>
+
+    <section class="carte detail" aria-live="polite">
+      @if (courant(); as c) {
+        <header class="detail-tete">
+          <div>
+            <h2>{{ c.matiereNom }}</h2>
+            <p class="note">{{ c.enseignantNom }} · {{ c.matiereCode }} · {{ c.semestreNom }}</p>
+          </div>
+          <span class="note">{{ c.supports }} support{{ c.supports > 1 ? 's' : '' }}</span>
+        </header>
+
+        @if (chargementSupports()) {
+          <p class="vide">Chargement…</p>
+        } @else if (!supports().length) {
+          <div class="vide-bloc">
+            <app-icon nom="folder-open" [taille]="34" />
+            <p><strong>Pas encore de support pour cette matière.</strong>Votre enseignant n'a encore rien déposé. Vous recevrez une notification dès qu'un document sera disponible.</p>
+          </div>
+        } @else {
+          @for (g of groupes(); track g.chapitre) {
+            <h3 class="chapitre">{{ g.chapitre }}</h3>
+            <ul class="supports" role="list">
+              @for (s of g.supports; track s.id) {
+                <li>
+                  <span class="format" [class.lien-format]="s.nature === 'LIEN'">{{ format(s) }}</span>
+                  <div class="corps">
+                    <span class="titre-support">{{ s.titre }}@if (nouveau(s.dateDepot)) { <span class="puce vert nouveau-puce">Nouveau</span> }</span>
+                    <span class="sous">
+                      @if (s.nature === 'FICHIER') { {{ taille(s.tailleOctets) }} · } ajouté le {{ jour(s.dateDepot) }}
+                    </span>
+                  </div>
+                  <div class="actions">
+                    @if (s.nature === 'FICHIER') {
+                      <button class="btn clair petit" type="button" [disabled]="telechargement() === s.id" (click)="telecharger(s)" [attr.aria-label]="'Télécharger ' + s.titre">
+                        <app-icon nom="download" [taille]="17" />{{ telechargement() === s.id ? 'Téléchargement…' : 'Télécharger' }}
+                      </button>
+                    } @else {
+                      <a class="btn clair petit" [href]="s.url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="'Ouvrir ' + s.titre + ' (nouvel onglet)'"><app-icon nom="open" [taille]="17" />Ouvrir</a>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        }
+      } @else {
+        <p class="vide">Choisissez une matière.</p>
+      }
+    </section>
+  </div>
+}

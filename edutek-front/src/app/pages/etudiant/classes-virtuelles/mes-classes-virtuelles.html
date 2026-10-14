@@ -1,0 +1,72 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Enseignement à distance</p>
+    <h1>Mes classes virtuelles</h1>
+    <p class="intro">Les séances en ligne programmées par vos enseignants, avec le lien de connexion et les supports de cours déposés.</p>
+  </div>
+  <div class="boutons">
+    <div class="segments" role="group" aria-label="Période">
+      <button type="button" [class.actif]="avenir()" [attr.aria-pressed]="avenir()" (click)="basculer(true)">À venir</button>
+      <button type="button" [class.actif]="!avenir()" [attr.aria-pressed]="!avenir()" (click)="basculer(false)">Toutes</button>
+    </div>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement() && !liste().length) {
+  <section class="carte bloc rise"><p class="vide" style="padding:0">Chargement…</p></section>
+} @else if (!erreur()) {
+  <div class="classes">
+    @for (c of triees(); track c.id; let i = $index) {
+      <article class="carte classe rise" [class.passee]="passee(c)" [style.animation-delay]="(0.08 + i * 0.06) + 's'">
+        <div class="date-bloc"><b>{{ jour(c.dateHeure) }}</b><span>{{ mois(c.dateHeure) }}</span></div>
+        <div class="corps">
+          <h2>{{ c.matiereNom }}</h2>
+          <p class="gris">{{ quand(c.dateHeure) }}</p>
+          <div class="puces" style="margin-top:8px">
+            <span class="puce indigo">{{ plateforme(c.plateforme) }}</span>
+            @if (c.enseignantNom) { <span class="puce gris">{{ c.enseignantNom }}</span> }
+            @if (c.classeNom) { <span class="puce gris">{{ c.classeNom }}</span> }
+            @if (passee(c)) { <span class="puce gris">Terminée</span> }
+          </div>
+          @if (c.codeAcces) { <p class="code">Code d'accès : <strong>{{ c.codeAcces }}</strong></p> }
+        </div>
+        <div class="boutons-classe">
+          <button class="btn clair petit" type="button" (click)="ouvrirSupports(c)" [attr.aria-label]="'Supports de cours : ' + c.matiereNom"><app-icon nom="folder-open" [taille]="17" />Supports</button>
+          @if (!passee(c)) {
+            <a class="btn indigo petit" [href]="c.lien" target="_blank" rel="noopener" [attr.aria-label]="'Rejoindre la classe virtuelle : ' + c.matiereNom"><app-icon nom="videocam" [taille]="17" />Rejoindre</a>
+          }
+        </div>
+      </article>
+    } @empty {
+      <section class="carte bloc"><p class="vide-bloc" style="padding:0">
+        @if (avenir()) { <strong>Aucune classe virtuelle programmée.</strong>Vos enseignants les publient ici ; affichez « Toutes » pour retrouver les séances passées et leurs supports. }
+        @else { <strong>Aucune classe virtuelle.</strong>Aucune séance en ligne n'a encore été programmée pour votre classe. }
+      </p></section>
+    }
+  </div>
+}
+
+@if (cible(); as c) {
+  <app-modal [titre]="'Supports · ' + (c.matiereNom ?? '')" [largeur]="620" (fermer)="fermer()">
+    <p class="texte-fenetre">Classe virtuelle du {{ dateHeure(c.dateHeure) }}{{ c.enseignantNom ? ' · ' + c.enseignantNom : '' }}</p>
+    @if (erreurSupports()) { <p class="bandeau" role="alert">{{ erreurSupports() }}</p> }
+    @if (supports() === null) {
+      <p class="gris">Chargement…</p>
+    } @else {
+      <ul class="liste">
+        @for (s of supports(); track s.id) {
+          <li>
+            <span class="pastille" style="background:#3d5bd6"><app-icon [nom]="iconeSupport(s.type)" [taille]="19" /></span>
+            <div class="corps"><strong>{{ s.titre }}</strong><span>{{ typeSupport(s.type) }} · déposé le {{ dateHeure(s.dateDepot) }}</span></div>
+            <a class="lien" [href]="s.url" target="_blank" rel="noopener" [attr.aria-label]="'Ouvrir : ' + s.titre"><app-icon nom="open" [taille]="16" />Ouvrir</a>
+          </li>
+        } @empty {
+          @if (!erreurSupports()) { <li class="gris">Aucun support déposé pour cette séance.</li> }
+        }
+      </ul>
+    }
+    <div class="pied"><button class="btn clair" type="button" (click)="fermer()">Fermer</button></div>
+  </app-modal>
+}

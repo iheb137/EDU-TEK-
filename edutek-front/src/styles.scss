@@ -1,0 +1,50 @@
+// ─── Jetons de design Edu-Tek ───────────────────────────────────────────────
+:root {
+  --navy-950: #050e26;
+  --navy-900: #071533;
+  --navy-800: #0a1b45;
+  --indigo: #3d5bd6;
+  --teal: #3ddcb0;
+  --sky: #5fd0e8;
+  --bg: #f2f5fb;
+  --surface: #ffffff;
+  --ink: #0d1b3d;
+  --muted: #55648a;
+  --faint: #7a88a8;
+  --line: #dfe5f1;
+  --risk-high: #d6453a;
+  --risk-mid: #d98a00;
+  --risk-low: #1f9d78;
+  --font: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  // Image de fond de la page de connexion.
+  // Pour utiliser votre photo : la placer dans public/images/ puis remplacer par
+  //   --fond-connexion: url('/images/fond-connexion.jpg');
+  --fond-connexion: url('/images/fond-connexion.jpg');
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body { margin: 0; min-height: 100%; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: inherit; text-decoration: none; }
+button, input { font-family: inherit; }
+:focus-visible { outline: 2px solid var(--indigo); outline-offset: 2px; }
+
+// ─── Animations communes ────────────────────────────────────────────────────
+@keyframes rise { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@keyframes grow { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+
+.rise { animation: rise .75s cubic-bezier(.2, .8, .2, 1) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; }
+}

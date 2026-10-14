@@ -27,8 +27,14 @@ public class EnseignementController {
     @GetMapping
     @Transactional(readOnly = true)
     @PreAuthorize("hasAnyRole('SUPERADMIN','ADMIN_PEDAGOGIQUE','ADMIN_FINANCIER','ENSEIGNANT')")
-    public List<EnseignementDto> lister() {
-        return enseignementRepository.findAll().stream().map(EnseignementDto::from).toList();
+    public List<EnseignementDto> lister(org.springframework.security.core.Authentication auth) {
+        // Un enseignant ne voit que ses propres enseignements ; les administrateurs voient tout.
+        boolean enseignantSeul = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ENSEIGNANT".equals(a.getAuthority()))
+                && auth.getAuthorities().stream().noneMatch(a -> List.of("ROLE_SUPERADMIN", "ROLE_ADMIN_PEDAGOGIQUE", "ROLE_ADMIN_FINANCIER").contains(a.getAuthority()));
+        List<Enseignement> liste = enseignantSeul
+                ? enseignementRepository.findByEnseignantEmail(auth.getName())
+                : enseignementRepository.findAll();
+        return liste.stream().map(EnseignementDto::from).toList();
     }
 
     @GetMapping("/{id}")

@@ -1,0 +1,102 @@
+<a class="retour" routerLink="/etudiants"><app-icon nom="arrow-back" [taille]="16" />Tous les étudiants</a>
+
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Fiche étudiant{{ etudiant() ? ' · ' + etudiant()!.matricule : '' }}</p>
+    <h1>{{ etudiant() ? etudiant()!.prenom + ' ' + etudiant()!.nom : 'Étudiant' }}</h1>
+    <p class="intro">Informations du dossier, classe de rattachement et inscriptions aux formations.</p>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement() && !etudiant()) {
+  <section class="carte rise" style="margin-top:22px"><p class="vide">Chargement…</p></section>
+} @else if (etudiant(); as e) {
+  <div class="grille">
+    <section class="carte bloc rise" style="animation-delay: .06s" aria-labelledby="t-infos">
+      <div class="bloc-tete">
+        <h2 id="t-infos">Informations</h2>
+        <span class="puce" [class.vert]="e.actif" [class.gris]="!e.actif">{{ e.actif ? 'Compte actif' : 'Compte inactif' }}</span>
+      </div>
+      <dl class="infos">
+        <dt>Nom</dt><dd>{{ e.nom }}</dd>
+        <dt>Prénom</dt><dd>{{ e.prenom }}</dd>
+        <dt>Matricule</dt><dd><span class="code">{{ e.matricule }}</span></dd>
+        <dt>E-mail</dt><dd>{{ e.email }}</dd>
+        <dt>Téléphone</dt><dd>{{ e.telephone || '—' }}</dd>
+        <dt>Niveau</dt><dd>{{ e.niveau || '—' }}</dd>
+      </dl>
+    </section>
+
+    <section class="carte bloc rise" style="animation-delay: .12s" aria-labelledby="t-classe">
+      <div class="bloc-tete"><h2 id="t-classe">Classe</h2></div>
+      @if (classe(); as c) {
+        <dl class="infos">
+          <dt>Classe</dt><dd><a class="lien" [routerLink]="['/classes', c.id]">{{ c.nom }}</a> <span class="code">{{ c.code }}</span></dd>
+          <dt>Année</dt><dd>{{ c.anneeUniversitaire || '—' }}</dd>
+          <dt>Formation</dt><dd>@if (formationClasse(); as f) { <a class="lien-doux" [routerLink]="['/formations', f.id]">{{ f.nom }}</a> } @else { — }</dd>
+        </dl>
+      } @else {
+        <p class="gris" style="margin:0;font-size:14px">Cet étudiant n'est rattaché à aucune classe. Modifiez son dossier depuis la liste des étudiants pour l'affecter.</p>
+      }
+    </section>
+  </div>
+
+  <section class="carte tableau compact rise" style="animation-delay: .18s; margin-top: 18px" aria-labelledby="t-insc">
+    <div class="bloc-tete" style="padding: 18px 24px 6px; margin: 0">
+      <h2 id="t-insc">Inscriptions</h2>
+      @if (peutEcrire) { <button class="btn clair" type="button" (click)="nouvelle()"><app-icon nom="add" [taille]="18" />Nouvelle inscription</button> }
+    </div>
+    @if (inscriptions().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Formation</th><th>Date d'inscription</th><th>Statut</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (i of inscriptions(); track i.id) {
+              <tr>
+                <td>@if (i.formation) { <span class="nom">{{ i.formation.nom }}</span><br><span class="note">{{ i.formation.code }}</span> } @else { — }</td>
+                <td class="gris">{{ date(i.dateInscription) || '—' }}</td>
+                <td><span class="puce" [class]="statut(i.statut).classe">{{ statut(i.statut).libelle }}</span></td>
+                <td>
+                  @if (peutEcrire) {
+                    <div class="actions"><button class="icone" type="button" title="Modifier l'inscription" [attr.aria-label]="'Modifier l\'inscription à ' + (i.formation?.code ?? '')" (click)="modifier(i)"><app-icon nom="pencil" [taille]="19" /></button></div>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else { <p class="vide">Aucune inscription enregistrée pour cet étudiant.</p> }
+  </section>
+}
+
+@if (fenetre() === 'inscription') {
+  <app-modal [titre]="cible() ? 'Modifier l\'inscription' : 'Nouvelle inscription'" [largeur]="540" (fermer)="fermer()">
+    <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+      <div class="champ-f large">
+        <label for="in-form">Formation</label>
+        <select id="in-form" formControlName="formationId">
+          <option [ngValue]="null" disabled>Choisir une formation</option>
+          @for (f of formationsTriees(); track f.id) { <option [ngValue]="f.id">{{ f.code }} · {{ f.nom }}</option> }
+        </select>
+        @if (cible()) { <span class="aide">La formation d'une inscription existante n'est pas modifiable.</span> }
+        @if (formulaire.controls.formationId.touched && formulaire.controls.formationId.invalid) { <span class="erreur-champ">Choisissez une formation.</span> }
+      </div>
+      <div class="champ-f">
+        <label for="in-statut">Statut</label>
+        <select id="in-statut" formControlName="statut">
+          @for (s of statuts; track s.valeur) { <option [ngValue]="s.valeur">{{ s.libelle }}</option> }
+        </select>
+      </div>
+      <div class="champ-f"><label for="in-date">Date d'inscription</label><input id="in-date" type="date" formControlName="dateInscription"></div>
+    </form>
+    @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+    <div class="pied">
+      <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+      <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+    </div>
+  </app-modal>
+}

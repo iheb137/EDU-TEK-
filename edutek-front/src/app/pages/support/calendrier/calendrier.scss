@@ -1,0 +1,64 @@
+// Couleurs des catégories (fond clair + trait foncé)
+.cat-SEANCE { --c: #3d5bd6; --cf: #e8edfb; --ct: #2a44a8; }
+.cat-EXAMEN { --c: #d98a00; --cf: #fff1d6; --ct: #8a5a00; }
+.cat-CLASSE_VIRTUELLE { --c: #1f9d78; --cf: #ddf5ec; --ct: #0f6b4f; }
+.cat-EVENEMENT { --c: #0a1b45; --cf: #0a1b45; --ct: #ffffff; }
+
+.barre { margin-top: 22px; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 12px; }
+.navigation { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.navigation .btn { height: 36px; }
+.periode { margin: 0 0 0 8px; font-size: 21px; font-weight: 800; min-width: 170px; }
+.onglet app-icon { margin-right: -2px; }
+
+.legende { margin-top: 14px; display: flex; flex-wrap: wrap; gap: 8px; }
+.filtre-cat { all: unset; box-sizing: border-box; height: 32px; padding: 0 12px; border-radius: 16px; border: 1px solid var(--line); background: #fff;
+  display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; transition: opacity .2s, background .2s;
+  &:hover { background: #f5f8ff; } &:focus-visible { outline: 2px solid var(--indigo); }
+  &.eteint { opacity: .5; .pastille-cat { background: transparent; } }
+  .compte { font-size: 11.5px; font-weight: 700; color: var(--muted); }
+}
+.pastille-cat { width: 10px; height: 10px; border-radius: 50%; background: var(--c); border: 2px solid var(--c); }
+
+// Vue mensuelle
+.mois { margin-top: 16px; overflow: hidden; }
+.entete-semaine, .semaine { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.entete-semaine span { padding: 10px 10px; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.case { min-height: 116px; padding: 6px 6px 8px; border-top: 1px solid #eef1f8; border-left: 1px solid #eef1f8; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.case:first-child { border-left: 0; }
+.case.weekend { background: #fafbfe; }
+.case.hors { background: #f6f8fc; .numero { color: #b3bdd3; } }
+.numero { all: unset; box-sizing: border-box; align-self: flex-start; min-width: 28px; height: 28px; padding: 0 6px; border-radius: 14px; display: inline-flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: var(--ink); cursor: pointer; &:hover { background: #e8edfb; } &:focus-visible { outline: 2px solid var(--indigo); } }
+.case.auj .numero { background: var(--indigo); color: #fff; }
+.puce-cal { all: unset; box-sizing: border-box; display: block; width: 100%; padding: 3px 7px; border-radius: 6px; border-left: 3px solid var(--c); background: var(--cf); color: var(--ct);
+  font-size: 12px; font-weight: 600; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer;
+  &:hover { filter: brightness(.96); } &:focus-visible { outline: 2px solid var(--indigo); }
+  .h { font-weight: 800; margin-right: 5px; }
+}
+.plus { all: unset; cursor: pointer; padding: 2px 7px; font-size: 12px; font-weight: 700; color: var(--indigo); border-radius: 6px; &:hover { background: #e8edfb; } &:focus-visible { outline: 2px solid var(--indigo); } }
+
+// Vue liste et liste du jour
+.liste { margin-top: 16px; padding: 6px 0; }
+.groupe { padding: 14px 24px 10px; border-top: 1px solid #eef1f8; &:first-child { border-top: 0; } }
+.groupe h3 { margin: 0 0 8px; font-size: 14.5px; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+.groupe ul, .jour-liste { margin: 0; padding: 0; list-style: none; }
+.rangee { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 130px 4px minmax(0, 1fr) auto; align-items: center; gap: 14px; padding: 9px 10px; border-radius: 10px; cursor: pointer;
+  &:hover { background: #f5f8ff; } &:focus-visible { outline: 2px solid var(--indigo); } }
+.jour-liste .rangee { grid-template-columns: 120px 4px minmax(0, 1fr); }
+.horaire { font-size: 13px; font-weight: 700; color: var(--muted); }
+.barre-cat { align-self: stretch; min-height: 34px; border-radius: 2px; background: var(--c); }
+.texte { display: flex; flex-direction: column; gap: 2px; min-width: 0; font-size: 14px; .gris { font-size: 12.5px; } }
+.etiquette { justify-self: end; padding: 3px 10px; border-radius: 12px; font-size: 11.5px; font-weight: 700; background: var(--cf); color: var(--ct); white-space: nowrap; }
+@media (max-width: 720px) { .rangee { grid-template-columns: 90px 4px minmax(0, 1fr); } .rangee .etiquette { display: none; } .case { min-height: 84px; } .puce-cal .h { display: none; } }
+
+// Calendrier académique de l'année
+.annuel { margin-top: 22px; padding: 22px 24px; }
+.evenements { margin: 14px 0 0; padding: 0; list-style: none; }
+.evenements li { display: grid; grid-template-columns: 210px minmax(0, 1fr) auto; gap: 16px; align-items: start; padding: 13px 0; border-top: 1px solid #eef1f8; }
+.evenements li:first-child { border-top: 0; }
+.date-ev { font-size: 13.5px; font-weight: 700; color: var(--muted); padding-top: 2px; }
+.evenements .texte { gap: 6px; }
+.desc { font-size: 13px; line-height: 1.5; }
+.puce.type-VACANCES, .puce.type-FERIE { background: #ddf5ec; color: #0f6b4f; }
+.puce.type-PERIODE_EXAMENS, .puce.type-FIN_SEMESTRE { background: #fff1d6; color: #8a5a00; }
+@media (max-width: 720px) { .evenements li { grid-template-columns: 1fr; gap: 6px; } }

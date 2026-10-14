@@ -1,0 +1,9 @@
+.resume { margin-top: 22px; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; }
+.pave { all: unset; box-sizing: border-box; cursor: pointer; padding: 14px 18px; display: flex; flex-direction: column; gap: 2px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 14px; transition: border-color .2s, transform .2s;
+  &:hover { transform: translateY(-2px); } &.actif { border-color: var(--indigo); box-shadow: inset 0 0 0 1px var(--indigo); }
+  &:focus-visible { outline: 2px solid var(--indigo); } }
+.chiffre { font-size: 26px; font-weight: 800; letter-spacing: -.02em; }
+.libelle { font-size: 13px; font-weight: 600; color: var(--muted); }
+.puce.vous { margin-left: 8px; background: var(--navy-800); color: #fff; font-size: 11px; padding: 2px 8px; vertical-align: 1px; }
+a.icone { text-decoration: none; }

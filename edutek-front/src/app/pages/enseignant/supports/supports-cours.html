@@ -1,0 +1,211 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Enseignement</p>
+    <h1>Supports de cours</h1>
+    <p class="intro">Déposez vos cours, TD et corrigés pour chaque enseignement, rangés par chapitre. Les étudiants de la classe sont prévenus dès qu'un support est mis en ligne ; un support masqué reste visible de vous seul.</p>
+  </div>
+  @if (peutEcrire && courant()) {
+    <div class="boutons">
+      <button class="btn clair" type="button" (click)="ouvrir('lien')"><app-icon nom="link" [taille]="18" />Ajouter un lien</button>
+      <button class="btn indigo" type="button" (click)="ouvrir('fichier')"><app-icon nom="cloud-upload" [taille]="18" />Déposer un fichier</button>
+    </div>
+  }
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement()) {
+  <section class="carte rise" style="margin-top:22px"><p class="vide">Chargement…</p></section>
+} @else if (!enseignements().length) {
+  <section class="carte rise" style="margin-top:22px">
+    <p class="vide">Aucun enseignement ne vous est affecté pour le moment : vos matières apparaîtront ici dès qu'un enseignement vous sera attribué.</p>
+  </section>
+} @else {
+  <div class="espace rise" style="animation-delay: .1s">
+    <aside class="carte colonne" aria-label="Enseignements">
+      @if (enseignements().length > 6) {
+        <div class="recherche petite">
+          <app-icon nom="search" [taille]="17" />
+          <input type="search" placeholder="Matière ou classe" aria-label="Rechercher un enseignement" [value]="recherche()" (input)="recherche.set($any($event.target).value)">
+        </div>
+      }
+      <ul class="enseignements" role="list">
+        @for (e of filtres(); track e.enseignementId) {
+          <li>
+            <button type="button" class="ens" [class.actif]="e.enseignementId === selection()" [attr.aria-current]="e.enseignementId === selection() ? 'true' : null" (click)="choisir(e.enseignementId)">
+              <span class="ens-nom">{{ e.matiereNom }}</span>
+              <span class="ens-sous">{{ e.classeNom }} · {{ e.matiereCode }}@if (admin) { · {{ e.enseignantNom }} }</span>
+              <span class="ens-compte" [class.zero]="!e.supports">{{ e.supports }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="note" style="padding:12px">Aucun enseignement ne correspond.</li>
+        }
+      </ul>
+    </aside>
+
+    <section class="carte detail" aria-live="polite">
+      @if (courant(); as c) {
+        <header class="detail-tete">
+          <div>
+            <h2>{{ c.matiereNom }}</h2>
+            <p class="note">{{ c.classeNom }} · {{ c.semestreNom }}@if (admin) { · {{ c.enseignantNom }} }</p>
+          </div>
+          <span class="note">{{ c.supports }} support{{ c.supports > 1 ? 's' : '' }} · {{ c.visibles }} visible{{ c.visibles > 1 ? 's' : '' }}</span>
+        </header>
+
+        @if (chargementSupports() && !supports().length) {
+          <p class="vide">Chargement…</p>
+        } @else if (!supports().length) {
+          <div class="vide-bloc">
+            <app-icon nom="folder-open" [taille]="34" />
+            <p><strong>Aucun support pour cet enseignement.</strong>
+              @if (peutEcrire) { Déposez un PDF, une présentation ou un document, ou ajoutez le lien d'une vidéo : les étudiants de {{ c.classeNom }} le retrouveront dans « Mes cours ». }
+            </p>
+            @if (peutEcrire) { <button class="btn indigo" type="button" (click)="ouvrir('fichier')"><app-icon nom="cloud-upload" [taille]="18" />Déposer un fichier</button> }
+          </div>
+        } @else {
+          @for (g of groupes(); track g.chapitre) {
+            <h3 class="chapitre">{{ g.chapitre }}</h3>
+            <ul class="supports" role="list">
+              @for (s of g.supports; track s.id) {
+                <li [class.masque]="!s.visible">
+                  <span class="format" [class.lien-format]="s.nature === 'LIEN'">{{ format(s) }}</span>
+                  <div class="corps">
+                    <span class="titre-support">{{ s.titre }}</span>
+                    <span class="sous">
+                      @if (s.nature === 'FICHIER') { {{ s.nomFichier }} · {{ taille(s.tailleOctets) }} } @else { {{ s.url }} }
+                      · déposé le {{ quand(s.dateDepot) }}
+                    </span>
+                    @if (!s.visible) { <span class="puce gris">Masqué aux étudiants</span> }
+                  </div>
+                  <div class="actions">
+                    @if (s.nature === 'FICHIER') {
+                      <button class="icone" type="button" title="Télécharger" [attr.aria-label]="'Télécharger ' + s.titre" [disabled]="telechargement() === s.id" (click)="telecharger(s)"><app-icon nom="download" [taille]="19" /></button>
+                    } @else {
+                      <a class="icone" [href]="s.url" target="_blank" rel="noopener noreferrer" title="Ouvrir le lien" [attr.aria-label]="'Ouvrir ' + s.titre"><app-icon nom="open" [taille]="19" /></a>
+                    }
+                    @if (peutEcrire) {
+                      <button class="icone" type="button" [title]="s.visible ? 'Masquer aux étudiants' : 'Rendre visible'" [attr.aria-label]="(s.visible ? 'Masquer ' : 'Rendre visible ') + s.titre" (click)="basculer(s)"><app-icon [nom]="s.visible ? 'eye-off' : 'eye'" [taille]="19" /></button>
+                      <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier ' + s.titre" (click)="ouvrir('modifier', s)"><app-icon nom="pencil" [taille]="19" /></button>
+                      <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer ' + s.titre" (click)="ouvrir('supprimer', s)"><app-icon nom="trash" [taille]="19" /></button>
+                    }
+                  </div>
+                </li>
+              }
+            </ul>
+          }
+        }
+      }
+    </section>
+  </div>
+}
+
+<datalist id="liste-chapitres">
+  @for (c of chapitres(); track c) { <option [value]="c"></option> }
+</datalist>
+
+@switch (fenetre()) {
+  @case ('fichier') {
+    <app-modal titre="Déposer un fichier" [largeur]="560" (fermer)="fermer()">
+      <div class="formulaire">
+        <div class="champ-f large">
+          <label for="s-fichier">Fichier</label>
+          <input id="s-fichier" type="file" [accept]="formats" (change)="choisirFichier($event)">
+          @if (essai() && erreurFichier()) { <span class="erreur-champ">{{ erreurFichier() }}</span> }
+          @else { <span class="aide">PDF, Word, PowerPoint, Excel, OpenDocument, texte, ZIP ou image · {{ tailleMax }} Mo maximum.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="s-titre">Titre</label>
+          <input id="s-titre" type="text" maxlength="200" [value]="titre()" (input)="titre.set($any($event.target).value)" placeholder="Ex. : Cours 1 – Introduction">
+          @if (essai() && erreurTitre()) { <span class="erreur-champ">{{ erreurTitre() }}</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="s-chapitre">Chapitre (facultatif)</label>
+          <input id="s-chapitre" type="text" maxlength="120" list="liste-chapitres" [value]="chapitre()" (input)="chapitre.set($any($event.target).value)" placeholder="Ex. : Chapitre 1">
+          <span class="aide">Les supports d'un même chapitre sont regroupés.</span>
+        </div>
+        <label class="case"><input type="checkbox" [checked]="visible()" (change)="visible.set($any($event.target).checked)"> Visible des étudiants dès maintenant (ils reçoivent une notification)</label>
+      </div>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="deposerFichier()">{{ enCours() ? 'Envoi en cours…' : 'Déposer' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('lien') {
+    <app-modal titre="Ajouter un lien" [largeur]="560" (fermer)="fermer()">
+      <div class="formulaire">
+        <div class="champ-f large">
+          <label for="l-url">Adresse</label>
+          <input id="l-url" type="url" maxlength="500" [value]="url()" (input)="url.set($any($event.target).value)" placeholder="https://">
+          @if (essai() && erreurUrl()) { <span class="erreur-champ">{{ erreurUrl() }}</span> }
+          @else { <span class="aide">Vidéo, page web, dossier partagé…</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="l-titre">Titre</label>
+          <input id="l-titre" type="text" maxlength="200" [value]="titre()" (input)="titre.set($any($event.target).value)" placeholder="Ex. : Vidéo – démonstration">
+          @if (essai() && erreurTitre()) { <span class="erreur-champ">{{ erreurTitre() }}</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="l-chapitre">Chapitre (facultatif)</label>
+          <input id="l-chapitre" type="text" maxlength="120" list="liste-chapitres" [value]="chapitre()" (input)="chapitre.set($any($event.target).value)">
+        </div>
+        <label class="case"><input type="checkbox" [checked]="visible()" (change)="visible.set($any($event.target).checked)"> Visible des étudiants dès maintenant</label>
+      </div>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="ajouterLien()">{{ enCours() ? 'Enregistrement…' : 'Ajouter le lien' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('modifier') {
+    @if (cible(); as s) {
+      <app-modal titre="Modifier le support" [largeur]="560" (fermer)="fermer()">
+        <div class="formulaire">
+          @if (s.nature === 'FICHIER') { <p class="texte-boite">Fichier : <strong>{{ s.nomFichier }}</strong> ({{ taille(s.tailleOctets) }}). Pour changer de fichier, déposez-en un nouveau puis supprimez celui-ci.</p> }
+          <div class="champ-f large">
+            <label for="m-titre">Titre</label>
+            <input id="m-titre" type="text" maxlength="200" [value]="titre()" (input)="titre.set($any($event.target).value)">
+            @if (essai() && erreurTitre()) { <span class="erreur-champ">{{ erreurTitre() }}</span> }
+          </div>
+          @if (s.nature === 'LIEN') {
+            <div class="champ-f large">
+              <label for="m-url">Adresse</label>
+              <input id="m-url" type="url" maxlength="500" [value]="url()" (input)="url.set($any($event.target).value)">
+              @if (essai() && erreurUrl()) { <span class="erreur-champ">{{ erreurUrl() }}</span> }
+            </div>
+          }
+          <div class="champ-f large">
+            <label for="m-chapitre">Chapitre (facultatif)</label>
+            <input id="m-chapitre" type="text" maxlength="120" list="liste-chapitres" [value]="chapitre()" (input)="chapitre.set($any($event.target).value)">
+          </div>
+          <label class="case"><input type="checkbox" [checked]="visible()" (change)="visible.set($any($event.target).checked)"> Visible des étudiants</label>
+        </div>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn indigo" type="button" [disabled]="enCours()" (click)="modifier()">{{ enCours() ? 'Enregistrement…' : 'Enregistrer' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('supprimer') {
+    @if (cible(); as s) {
+      <app-modal titre="Supprimer le support" [largeur]="500" (fermer)="fermer()">
+        <p class="texte-boite">Supprimer définitivement « <strong>{{ s.titre }}</strong> » ? @if (s.nature === 'FICHIER') { Le fichier est effacé du serveur. } Les étudiants n'y auront plus accès.</p>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn rouge" type="button" [disabled]="enCours()" (click)="supprimer()">{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+}

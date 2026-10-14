@@ -1,0 +1,55 @@
+// Styles communs aux pages d'administration (importés par chaque composant).
+:host { display: block; }
+h1 { margin: 0; font-size: 32px; font-weight: 800; letter-spacing: -.01em; }
+h2 { margin: 0; font-size: 17px; font-weight: 700; }
+.entete { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 16px; }
+.surtitre { margin: 0 0 6px; font-size: 13px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--indigo); }
+.intro { margin: 8px 0 0; font-size: 14.5px; color: var(--muted); max-width: 640px; line-height: 1.55; }
+.boutons { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn { height: 40px; padding: 0 16px; border-radius: 10px; border: 0; color: #fff; font-size: 13.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: transform .2s, filter .2s; &:hover:not(:disabled) { transform: translateY(-1px); filter: brightness(1.12); } &:disabled { opacity: .6; cursor: progress; } }
+.marine { background: var(--navy-800); } .indigo { background: var(--indigo); }
+.btn.clair { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+.carte { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; box-shadow: 0 1px 2px rgb(13 27 61 / 4%), 0 12px 30px -18px rgb(13 27 61 / 18%); }
+.ligne { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.note { font-size: 12.5px; color: var(--faint); }
+.gris { color: var(--muted); }
+.bandeau { margin: 16px 0 0; padding: 12px 16px; border-radius: 12px; background: #fce8e6; color: #b3261e; font-size: 14px; }
+.bandeau.ok { background: #ddf5ec; color: #0f6b4f; }
+.vide { padding: 28px 30px; color: var(--muted); font-size: 14.5px; }
+
+.filtres { margin-top: 22px; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.recherche { position: relative; flex: 1 1 260px; max-width: 420px; }
+.recherche app-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--faint); }
+input.champ, select.champ, .recherche input { width: 100%; height: 40px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: #fff; color: var(--ink); font: 500 14px var(--font); }
+.recherche input { padding-left: 38px; }
+select.champ { width: auto; font-weight: 600; cursor: pointer; }
+
+.tableau { margin-top: 16px; overflow: hidden; }
+.defile { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 820px; font-size: 14px; }
+th { padding: 12px; text-align: left; font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+th:first-child, td:first-child { padding-left: 24px; } th:last-child, td:last-child { padding-right: 24px; }
+td { padding: 13px 12px; border-top: 1px solid #eef1f8; vertical-align: middle; }
+tbody tr { transition: background .2s; &:hover { background: #f5f8ff; } }
+.nom { font-weight: 700; }
+.puces { display: flex; flex-wrap: wrap; gap: 6px; }
+.puce { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: 700; background: #e8edfb; color: #2a44a8; }
+.puce.vert { background: #ddf5ec; color: #0f6b4f; } .puce.gris { background: #eceff6; color: #55648a; } .puce.orange { background: #fff1d6; color: #8a5a00; }
+.actions { display: flex; gap: 4px; justify-content: flex-end; }
+.icone { all: unset; box-sizing: border-box; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; border-radius: 9px; cursor: pointer; color: var(--muted); transition: background .2s, color .2s;
+  &:hover:not(:disabled) { background: #e8edfb; color: var(--indigo); } &:focus-visible { outline: 2px solid var(--indigo); } &:disabled { opacity: .35; cursor: not-allowed; } }
+.pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 14px 24px; border-top: 1px solid #eef1f8; font-size: 13px; color: var(--muted); }
+.pagination .boutons { gap: 6px; }
+
+// Formulaires dans les boîtes de dialogue
+.formulaire { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 16px; }
+.champ-f { display: flex; flex-direction: column; gap: 6px; &.large { grid-column: 1 / -1; } }
+.champ-f label { font-size: 13px; font-weight: 700; }
+.champ-f input, .champ-f select { height: 42px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); font: 500 14px var(--font); background: #fff; color: var(--ink); width: 100%; }
+.champ-f .rang { display: flex; gap: 8px; }
+.erreur-champ { font-size: 12.5px; color: #b3261e; }
+.pied { margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
+.secret { display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 12px; background: #f2f5fb; border: 1px dashed #b9c4e2; font-family: ui-monospace, Consolas, monospace; font-size: 16px; font-weight: 700; word-break: break-all; }
+.secret .icone { margin-left: auto; flex-shrink: 0; }
+@media (max-width: 640px) { .formulaire { grid-template-columns: 1fr; } }
+.visuel-cache { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }

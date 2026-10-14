@@ -1,0 +1,58 @@
+.vide.carte { margin-top: 8px; }
+.grille { margin-top: 22px; display: grid; gap: 20px; align-items: start; }
+.grille.haut { grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); }
+.grille.bas { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+@media (max-width: 980px) { .grille.haut, .grille.bas { grid-template-columns: 1fr; } }
+.bloc { padding: 22px 24px; }
+.bloc > .ligne { align-items: flex-start; }
+.sous-titre { margin: 4px 0 0; }
+
+.score-principal { margin: 18px 0 6px; display: flex; justify-content: space-between; align-items: flex-end; gap: 12px; flex-wrap: wrap;
+  .etiquette { display: block; font-size: 13px; font-weight: 600; color: var(--muted); }
+  strong { font-size: 44px; font-weight: 800; letter-spacing: -.03em; line-height: 1.1; }
+}
+.niveau.grand { font-size: 13px; padding: 6px 12px; }
+app-echelle { margin-top: 4px; }
+.bloc > .note { margin: 2px 0 0; }
+
+.infos { margin: 18px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 14px 18px; border-top: 1px solid #eef1f8; padding-top: 16px;
+  dt { font-size: 12px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+  dd { margin: 4px 0 0; font-size: 14px; font-weight: 600; }
+}
+.note-close { display: flex; align-items: center; gap: 8px; margin: 16px 0 0; padding: 10px 12px; border-radius: 10px; background: #f2f5fb; font-size: 13px; color: var(--muted); }
+
+.facteurs { margin-top: 20px; }
+.bloc .lien { margin-top: 2px; }
+
+.plan { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.action { display: flex; gap: 14px; align-items: flex-start; padding: 14px 14px 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: #fbfcff; }
+.type-icone { width: 38px; height: 38px; flex-shrink: 0; border-radius: 11px; background: #e8edfb; color: var(--indigo); display: flex; align-items: center; justify-content: center; }
+.contenu { flex: 1; min-width: 0; strong { font-size: 14.5px; } }
+.description { margin: 6px 0 6px; font-size: 14px; line-height: 1.5; color: var(--ink); white-space: pre-line; overflow-wrap: anywhere; }
+.vide-bloc { margin: 16px 0 0; padding: 16px; border: 1px dashed var(--line); border-radius: 12px; font-size: 14px; color: var(--muted); line-height: 1.55; }
+
+.form-avis { margin-top: 16px; padding: 16px; border-radius: 12px; background: #f7f9fe; border: 1px solid #e6ebf6; display: flex; flex-direction: column; gap: 14px;
+  .pied { margin-top: 0; }
+}
+fieldset { border: 0; margin: 0; padding: 0; min-width: 0; }
+legend { padding: 0; margin-bottom: 8px; font-size: 13px; font-weight: 700; }
+.choix-avis { display: flex; gap: 10px; flex-wrap: wrap; }
+.choix { all: unset; box-sizing: border-box; cursor: pointer; height: 38px; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border-radius: 10px;
+  border: 1px solid var(--line); background: #fff; font-size: 13.5px; font-weight: 700; color: var(--muted); transition: background .2s, border-color .2s, color .2s;
+  &:hover { border-color: #b9c4e2; color: var(--ink); } &:focus-visible { outline: 2px solid var(--indigo); }
+  &.oui { background: #ddf5ec; border-color: #2fb98d; color: #0f6b4f; }
+  &.non { background: #eceff6; border-color: #9aa6c4; color: #3c4a6e; }
+}
+.avis { list-style: none; margin: 16px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px;
+  li { padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; }
+  p { margin: 8px 0 0; font-size: 14px; line-height: 1.5; white-space: pre-line; overflow-wrap: anywhere; }
+}
+
+.texte-modal { margin: 0 0 12px; font-size: 14px; line-height: 1.55; }
+.bandeau.attention { background: #fff1d6; color: #8a5a00; }
+.options-statut { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 16px; }
+.option { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer;
+  input { width: 17px; height: 17px; accent-color: var(--indigo); margin: 0; }
+  &:has(input:checked) { border-color: var(--indigo); background: #f3f6ff; }
+}
+.boutons .btn.clair { color: var(--ink); }

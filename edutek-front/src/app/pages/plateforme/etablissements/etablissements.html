@@ -1,0 +1,151 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Plateforme</p>
+    <h1>Établissements</h1>
+    <p class="intro">Les établissements hébergés par Edu-Tek. Chacun dispose de ses propres comptes et données ; un établissement désactivé ne peut plus se connecter.</p>
+  </div>
+  @if (surPlateforme()) {
+    <div class="boutons">
+      <button class="btn indigo" type="button" (click)="ouvrirCreation()"><app-icon nom="add" [taille]="18" />Nouvel établissement</button>
+    </div>
+  }
+</div>
+
+@if (!surPlateforme()) {
+  <section class="carte explication rise" style="animation-delay: .1s">
+    <span class="pastille"><app-icon nom="lock-closed" [taille]="22" /></span>
+    <div>
+      <h2>Réservé à l'administration de la plateforme</h2>
+      <p>Vous êtes connecté sur l'établissement <strong>{{ auth.session()?.etablissement }}</strong>. La gestion des établissements n'est possible qu'avec le compte du super administrateur de la plateforme.</p>
+      <p>Pour y accéder, déconnectez-vous puis reconnectez-vous en saisissant le code d'établissement <code>plateforme</code> sur l'écran de connexion.</p>
+      <div class="boutons" style="margin-top: 16px">
+        <button class="btn marine" type="button" (click)="deconnecter()"><app-icon nom="log-out" [taille]="18" />Se déconnecter</button>
+      </div>
+    </div>
+  </section>
+} @else {
+  @if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+  @if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+  <div class="filtres rise" style="animation-delay: .1s">
+    <div class="recherche">
+      <app-icon nom="search" [taille]="18" />
+      <input type="search" placeholder="Rechercher par code ou nom" aria-label="Rechercher un établissement" [value]="filtre()" (input)="filtre.set($any($event.target).value)">
+    </div>
+    @if (liste(); as l) { <span class="note">{{ l.length }} établissement{{ l.length > 1 ? 's' : '' }} · {{ nbActifs() }} actif{{ nbActifs() > 1 ? 's' : '' }}</span> }
+  </div>
+
+  <section class="carte tableau rise" style="animation-delay: .18s">
+    @if (chargement() && !liste()) {
+      <p class="vide">Chargement…</p>
+    } @else if (liste()) {
+      @if (visibles().length) {
+        <div class="defile">
+          <table>
+            <thead><tr><th>Établissement</th><th>Code de connexion</th><th>État</th><th>Créé le</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+            <tbody>
+              @for (e of visibles(); track e.code) {
+                <tr>
+                  <td><span class="nom">{{ e.nom }}</span>@if (e.code === codePlateforme) { <br><span class="note">Espace d'administration de la plateforme</span> }</td>
+                  <td><code class="code">{{ e.code }}</code></td>
+                  <td><span class="puce" [class.vert]="e.actif" [class.gris]="!e.actif">{{ e.actif ? 'Actif' : 'Désactivé' }}</span></td>
+                  <td class="gris">{{ dateFr(e.dateCreation) }}</td>
+                  <td>
+                    <div class="actions">
+                      @if (e.code !== codePlateforme) {
+                        @if (e.actif) {
+                          <button class="icone danger" type="button" title="Désactiver l'établissement" [attr.aria-label]="'Désactiver ' + e.nom" (click)="demanderActivation(e)"><app-icon nom="power" [taille]="19" /></button>
+                        } @else {
+                          <button class="reactiver" type="button" [attr.aria-label]="'Réactiver ' + e.nom" (click)="demanderActivation(e)"><app-icon nom="power" [taille]="16" />Réactiver</button>
+                        }
+                      }
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="vide">{{ filtre() ? 'Aucun établissement ne correspond à cette recherche.' : 'Aucun établissement pour le moment. Créez le premier avec « Nouvel établissement ».' }}</p>
+      }
+    }
+  </section>
+}
+
+@switch (fenetre()) {
+  @case ('creer') {
+    <app-modal titre="Nouvel établissement" [largeur]="620" (fermer)="fermer()">
+      <p class="gris aide">L'établissement est créé avec son premier compte : un super administrateur qui devra changer son mot de passe à la première connexion.</p>
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="creer()" novalidate>
+        <div class="champ-f">
+          <label for="e-code">Code de connexion</label>
+          <input id="e-code" formControlName="code" placeholder="ex. test-01" autocomplete="off" (input)="normaliserCode($any($event.target).value)">
+          @if (formulaire.controls.code.touched && formulaire.controls.code.invalid) { <span class="erreur-champ">2 à 40 caractères : minuscules, chiffres et tirets.</span> }
+          @else { <span class="note">Saisi par les utilisateurs à la connexion.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="e-nom">Nom de l'établissement</label>
+          <input id="e-nom" formControlName="nom" autocomplete="off">
+          @if (formulaire.controls.nom.touched && formulaire.controls.nom.invalid) { <span class="erreur-champ">Obligatoire (200 caractères au plus).</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="e-mail">E-mail de l'administrateur</label>
+          <input id="e-mail" type="email" formControlName="adminEmail" autocomplete="off">
+          @if (formulaire.controls.adminEmail.touched && formulaire.controls.adminEmail.invalid) { <span class="erreur-champ">Adresse e-mail invalide.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="e-mdp">Mot de passe temporaire de l'administrateur</label>
+          <div class="rang">
+            <input id="e-mdp" [type]="mdpVisible() ? 'text' : 'password'" formControlName="adminMotDePasse" autocomplete="new-password">
+            <button class="icone" type="button" title="Afficher ou masquer" aria-label="Afficher ou masquer le mot de passe" (click)="mdpVisible.set(!mdpVisible())"><app-icon [nom]="mdpVisible() ? 'eye-off' : 'eye'" [taille]="19" /></button>
+            <button class="icone" type="button" title="Générer un autre mot de passe" aria-label="Générer un autre mot de passe" (click)="regenerer()"><app-icon nom="refresh" [taille]="19" /></button>
+          </div>
+          @if (formulaire.controls.adminMotDePasse.touched && formulaire.controls.adminMotDePasse.invalid) { <span class="erreur-champ">8 à 64 caractères.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="creer()">{{ enCours() ? 'Création…' : 'Créer l\'établissement' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('secret') {
+    <app-modal titre="Établissement créé" [largeur]="540" (fermer)="fermer()">
+      @if (secret(); as s) {
+        <p class="gris aide">Transmettez ces informations à l'administrateur de <strong>{{ s.nom }}</strong>. Le mot de passe ne sera plus affiché ; il devra être changé à la première connexion.</p>
+        <dl class="identifiants">
+          <dt>Code d'établissement</dt><dd><code>{{ s.code }}</code></dd>
+          <dt>E-mail</dt><dd>{{ s.email }}</dd>
+        </dl>
+        <div class="secret">
+          <span>{{ s.motDePasse }}</span>
+          <button class="icone" type="button" title="Copier" aria-label="Copier le mot de passe" (click)="copier(s.motDePasse)"><app-icon nom="copy" [taille]="19" /></button>
+        </div>
+      }
+      <div class="pied"><button class="btn indigo" type="button" (click)="fermer()">Terminé</button></div>
+    </app-modal>
+  }
+
+  @case ('activation') {
+    @if (cible(); as e) {
+      <app-modal [titre]="e.actif ? 'Désactiver l\'établissement' : 'Réactiver l\'établissement'" [largeur]="500" (fermer)="fermer()">
+        @if (e.actif) {
+          <p class="aide">Désactiver <strong>{{ e.nom }}</strong> (<code>{{ e.code }}</code>) ?</p>
+          <p class="gris aide">Plus aucun compte de cet établissement ne pourra se connecter, y compris ses administrateurs. Les données sont conservées et l'établissement peut être réactivé à tout moment.</p>
+        } @else {
+          <p class="aide">Réactiver <strong>{{ e.nom }}</strong> (<code>{{ e.code }}</code>) ? Ses utilisateurs pourront de nouveau se connecter.</p>
+        }
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn" type="button" [class.danger-plein]="e.actif" [class.indigo]="!e.actif" [disabled]="enCours()" (click)="confirmerActivation()">
+            {{ enCours() ? 'Enregistrement…' : e.actif ? 'Désactiver' : 'Réactiver' }}
+          </button>
+        </div>
+      </app-modal>
+    }
+  }
+}

@@ -1,0 +1,120 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Espace enseignant</p>
+    <h1>Bonjour {{ auth.session()?.prenom }}</h1>
+    <p class="intro">Vos enseignements{{ semestreCourant() ? ' du ' + semestreCourant() : '' }}, la saisie des notes, vos prochaines séances et le suivi de vos pointages.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/classes-virtuelles" [queryParams]="{ creer: 1 }"><app-icon nom="videocam" [taille]="18" />Planifier une classe virtuelle</a>
+    @if (estEnseignant) { <a class="btn indigo" routerLink="/appel"><app-icon nom="checkbox" [taille]="18" />Faire l'appel</a> }
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+@if (anomalies().length) {
+  <p class="bandeau" role="alert">{{ anomalies().length }} pointage{{ anomalies().length > 1 ? 's ont' : ' a' }} été signalé{{ anomalies().length > 1 ? 's' : '' }} en anomalie par le service financier. <a class="lien-alerte" routerLink="/mes-pointages" [queryParams]="{ onglet: 'pointages' }">Voir le détail</a></p>
+}
+
+<section class="indicateurs" aria-label="Indicateurs">
+  <a class="carte rise kpi" style="animation-delay: .06s" routerLink="/mes-enseignements">
+    <div class="ligne"><span class="titre">Enseignements</span><span class="pastille" style="background: var(--navy-800)"><app-icon nom="book" [taille]="20" /></span></div>
+    <div class="valeur">{{ chargement() ? '…' : courants().length }}</div>
+    <span class="note">{{ semestreCourant() || 'Semestre en cours' }}</span>
+  </a>
+  <a class="carte rise kpi" style="animation-delay: .12s" routerLink="/mes-enseignements">
+    <div class="ligne"><span class="titre">Notes soumises</span><span class="pastille" style="background: var(--indigo)"><app-icon nom="document-text" [taille]="20" /></span></div>
+    <div class="valeur">{{ chargement() ? '…' : saisie().part + ' %' }}</div>
+    <span class="note">{{ saisie().soumises }} sur {{ saisie().attendues }} attendues · {{ saisie().clotures }} clôturé{{ saisie().clotures > 1 ? 's' : '' }}</span>
+  </a>
+  @if (estEnseignant) {
+    <a class="carte rise kpi" style="animation-delay: .18s" routerLink="/mes-pointages">
+      <div class="ligne"><span class="titre">Séances à pointer</span><span class="pastille" style="background: var(--risk-mid)"><app-icon nom="time" [taille]="20" /></span></div>
+      <div class="valeur">{{ chargement() ? '…' : aPointer().length }}</div>
+      <span class="note">Séances assurées non encore déclarées</span>
+    </a>
+    <a class="carte rise kpi" style="animation-delay: .24s" routerLink="/mes-pointages" [queryParams]="{ onglet: 'pointages' }">
+      <div class="ligne"><span class="titre">Pointages en attente</span><span class="pastille" style="background: var(--risk-low)"><app-icon nom="hourglass" [taille]="20" /></span></div>
+      <div class="valeur">{{ chargement() ? '…' : enAttente().length }}</div>
+      <span class="note">En cours de vérification par la finance</span>
+    </a>
+  }
+</section>
+
+<div class="duo">
+  <section class="carte rise grand" style="animation-delay: .3s">
+    <div class="ligne"><h2>Saisie des notes</h2><a class="lien" style="margin-top:0" routerLink="/mes-enseignements">Tous mes enseignements <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+    @if (courants().length) {
+      <ul class="enseignements">
+        @for (l of courants(); track l.e.id; let i = $index) {
+          <li>
+            <div class="ligne">
+              <span><strong>{{ l.e.matiere }}</strong><span class="gris">&nbsp;· {{ l.e.classe }}</span></span>
+              @if (l.av?.cloture) { <span class="puce gris">Clôturée</span> }
+              @else if (l.brouillons) { <span class="puce orange">{{ l.brouillons }} brouillon{{ l.brouillons > 1 ? 's' : '' }}</span> }
+              @else if (l.attendues && l.soumises >= l.attendues) { <span class="puce vert">Complète</span> }
+            </div>
+            @if (l.nbEvaluations) {
+              <div class="avancement">
+                <div class="piste"><div class="remplissage" [class.complet]="l.part >= 100" [style.width.%]="l.part" [style.animation-delay]="delai(i, .5)"></div></div>
+                <span class="chiffre">{{ l.soumises }} / {{ l.attendues }}</span>
+              </div>
+            } @else { <span class="note">Aucune évaluation planifiée</span> }
+          </li>
+        }
+      </ul>
+    } @else { <p class="vide" style="padding-left:0">{{ chargement() ? 'Chargement…' : 'Aucun enseignement ne vous est affecté pour le moment.' }}</p> }
+  </section>
+
+  <div class="colonne">
+    <section class="carte rise petit" style="animation-delay: .38s">
+      <h2>Prochaines séances</h2>
+      @if (prochainesSeances().length) {
+        <ul class="liste">
+          @for (s of prochainesSeances(); track s.id) {
+            <li>
+              <span class="quand"><strong>{{ jour(s.date) }}</strong><span>{{ mois(s.date) }}</span></span>
+              <span class="corps"><strong>{{ s.libelle }}</strong><span class="note">{{ heure(s.heureDebut) }} – {{ heure(s.heureFin) }}@if (s.salle) { · salle {{ s.salle }} }</span></span>
+            </li>
+          }
+        </ul>
+      } @else { <p class="vide" style="padding:14px 0 0">{{ chargement() ? 'Chargement…' : 'Aucune séance planifiée à venir.' }}</p> }
+    </section>
+
+    <section class="carte rise petit" style="animation-delay: .44s">
+      <div class="ligne"><h2>Classes virtuelles à venir</h2><a class="lien" style="margin-top:0" routerLink="/classes-virtuelles">Gérer <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+      @if (prochainesClasses().length) {
+        <ul class="liste">
+          @for (c of prochainesClasses(); track c.id) {
+            <li>
+              <span class="quand"><strong>{{ jour(c.dateHeure) }}</strong><span>{{ mois(c.dateHeure) }}</span></span>
+              <span class="corps"><strong>{{ c.matiereNom }} · {{ c.classeNom }}</strong><span class="note">{{ heure(c.dateHeure.slice(11)) }} · {{ libellePlateforme(c.plateforme) }}</span></span>
+              <a class="icone" [href]="c.lien" target="_blank" rel="noopener noreferrer" title="Rejoindre" [attr.aria-label]="'Rejoindre la classe virtuelle ' + c.matiereNom"><app-icon nom="open" [taille]="18" /></a>
+            </li>
+          }
+        </ul>
+      } @else { <p class="vide" style="padding:14px 0 0">{{ chargement() ? 'Chargement…' : 'Aucune classe virtuelle programmée.' }}</p> }
+    </section>
+  </div>
+</div>
+
+@if (estEnseignant && (aPointer().length || enAttente().length)) {
+  <section class="carte rise pointages" style="animation-delay: .5s">
+    <div class="ligne"><h2>Pointages</h2><a class="lien" style="margin-top:0" routerLink="/mes-pointages">Mes pointages <app-icon nom="arrow-forward" [taille]="16" /></a></div>
+    <ul class="liste">
+      @for (s of aPointer().slice(0, 3); track s.id) {
+        <li>
+          <span class="quand"><strong>{{ jour(s.date) }}</strong><span>{{ mois(s.date) }}</span></span>
+          <span class="corps"><strong>{{ s.libelle }}</strong><span class="note">{{ heure(s.heureDebut) }} – {{ heure(s.heureFin) }} · non pointée</span></span>
+          <a class="mini" routerLink="/mes-pointages" [queryParams]="{ seanceId: s.id }" [attr.aria-label]="'Pointer la séance du ' + dateFr(s.date)">Pointer</a>
+        </li>
+      }
+      @for (p of enAttente().slice(0, 3); track p.id) {
+        <li>
+          <span class="quand"><strong>{{ jour(p.date) }}</strong><span>{{ mois(p.date) }}</span></span>
+          <span class="corps"><strong>{{ p.matiereNom }} · {{ p.classeNom }}</strong><span class="note">{{ dureeFr(p.minutesDeclarees) }} déclarées</span></span>
+          <span [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span>
+        </li>
+      }
+    </ul>
+  </section>
+}

@@ -1,0 +1,123 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Communication</p>
+    <h1>Messagerie</h1>
+    <p class="intro">Échangez avec les enseignants, les étudiants et l'administration de l'établissement. Le destinataire est averti par une notification.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn indigo" type="button" (click)="ouvrirRedaction()"><app-icon nom="create" [taille]="18" />Nouveau message</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="carte boite rise" style="animation-delay: .1s" [class.lecture-ouverte]="selection()">
+  <aside class="colonne">
+    <div class="onglets" role="tablist" aria-label="Dossiers">
+      <button type="button" role="tab" id="onglet-recus" aria-controls="panneau-liste" [attr.aria-selected]="onglet() === 'recus'" [class.actif]="onglet() === 'recus'" (click)="changerOnglet('recus')">
+        <app-icon nom="mail" [taille]="18" />Reçus
+        @if (nonLus() > 0) { <span class="compte" [attr.aria-label]="nonLus() + ' non lus'">{{ nonLus() }}</span> }
+      </button>
+      <button type="button" role="tab" id="onglet-envoyes" aria-controls="panneau-liste" [attr.aria-selected]="onglet() === 'envoyes'" [class.actif]="onglet() === 'envoyes'" (click)="changerOnglet('envoyes')">
+        <app-icon nom="send" [taille]="17" />Envoyés
+      </button>
+      <button class="icone actualiser" type="button" title="Actualiser" aria-label="Actualiser la liste" [disabled]="chargement()" (click)="actualiser()"><app-icon nom="refresh" [taille]="18" /></button>
+    </div>
+
+    <div class="outils">
+      <div class="recherche">
+        <app-icon nom="search" [taille]="18" />
+        <input type="search" placeholder="Filtrer : objet, personne, contenu" aria-label="Filtrer les messages" [value]="filtre()" (input)="filtre.set($any($event.target).value)">
+      </div>
+      @if (onglet() === 'recus') {
+        <label class="bascule"><input type="checkbox" [checked]="nonLusSeulement()" (change)="nonLusSeulement.set($any($event.target).checked)">Non lus</label>
+      }
+    </div>
+
+    <div class="liste" id="panneau-liste" role="tabpanel" [attr.aria-labelledby]="'onglet-' + onglet()">
+      @if (!listeChargee()) {
+        <p class="vide">Chargement…</p>
+      } @else {
+        <ul>
+          @for (m of liste(); track m.id) {
+            <li>
+              <button type="button" class="element" [class.non-lu]="onglet() === 'recus' && !m.lu" [class.choisi]="selection()?.id === m.id"
+                      [attr.aria-current]="selection()?.id === m.id ? 'true' : null" (click)="lire(m)">
+                <span class="ligne1">
+                  <span class="qui">{{ onglet() === 'recus' ? m.expediteurNom : 'À : ' + m.destinataireNom }}</span>
+                  <span class="quand">{{ dateCourte(m.dateEnvoi) }}</span>
+                </span>
+                <span class="objet">
+                  @if (onglet() === 'recus' && !m.lu) { <span class="point" aria-hidden="true"></span><span class="visuel-cache">Non lu : </span> }
+                  {{ m.objet }}
+                </span>
+                <span class="extrait">{{ apercu(m.contenu) }}</span>
+              </button>
+            </li>
+          } @empty {
+            <li class="vide">
+              @if (filtre() || nonLusSeulement()) { Aucun message ne correspond au filtre. }
+              @else if (onglet() === 'recus') { Votre boîte de réception est vide. Les messages qui vous sont adressés apparaîtront ici. }
+              @else { Vous n'avez encore envoyé aucun message. Utilisez « Nouveau message » pour écrire à une personne de l'établissement. }
+            </li>
+          }
+        </ul>
+      }
+    </div>
+  </aside>
+
+  <article class="lecture" aria-live="polite">
+    @if (selection(); as m) {
+      <header class="tete-lecture">
+        <button class="icone retour" type="button" aria-label="Revenir à la liste" title="Revenir à la liste" (click)="fermerLecture()"><app-icon nom="arrow-back" [taille]="20" /></button>
+        <h2>{{ m.objet }}</h2>
+        @if (onglet() === 'recus') {
+          <button class="btn indigo" type="button" (click)="repondre(m)"><app-icon nom="return-up-back" [taille]="18" />Répondre</button>
+        }
+      </header>
+      <dl class="meta">
+        <div><dt>De</dt><dd>{{ m.expediteurNom }}</dd></div>
+        <div><dt>À</dt><dd>{{ m.destinataireNom }}</dd></div>
+        <div><dt>Envoyé le</dt><dd>{{ dateLongue(m.dateEnvoi) }}</dd></div>
+        @if (onglet() === 'envoyes') {
+          <div><dt>État</dt><dd><span class="puce" [class.vert]="m.lu" [class.gris]="!m.lu">{{ m.lu ? 'Lu par le destinataire' : 'Pas encore lu' }}</span></dd></div>
+        }
+      </dl>
+      <div class="corps">{{ m.contenu }}</div>
+      @if (lectureEnCours()) { <p class="note">Marquage comme lu…</p> }
+    } @else {
+      <div class="attente">
+        <app-icon nom="mail-open" [taille]="44" />
+        <p>Sélectionnez un message pour le lire.</p>
+      </div>
+    }
+  </article>
+</section>
+
+@if (redaction()) {
+  <app-modal titre="Nouveau message" [largeur]="680" (fermer)="fermerRedaction()">
+    <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="envoyer()" novalidate>
+      <div class="champ-f large">
+        <label for="m-dest">Destinataire</label>
+        <app-choix-destinataire idChamp="m-dest" [(destinataire)]="destinataire" (destinataireChange)="erreurDestinataire.set(false)" />
+        @if (erreurDestinataire()) { <span class="erreur-champ">Choisissez un destinataire dans l'annuaire.</span> }
+      </div>
+      <div class="champ-f large">
+        <label for="m-objet">Objet</label>
+        <input id="m-objet" formControlName="objet" maxlength="200" autocomplete="off">
+        @if (formulaire.controls.objet.touched && formulaire.controls.objet.invalid) { <span class="erreur-champ">L'objet est obligatoire (200 caractères maximum).</span> }
+      </div>
+      <div class="champ-f large">
+        <label for="m-contenu">Message</label>
+        <textarea id="m-contenu" formControlName="contenu" rows="9" maxlength="5000"></textarea>
+        @if (formulaire.controls.contenu.touched && formulaire.controls.contenu.invalid) { <span class="erreur-champ">Le message est obligatoire.</span> }
+      </div>
+    </form>
+    @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+    <div class="pied">
+      <button class="btn clair" type="button" (click)="fermerRedaction()">Annuler</button>
+      <button class="btn indigo" type="button" [disabled]="envoi()" (click)="envoyer()"><app-icon nom="send" [taille]="17" />{{ envoi() ? 'Envoi…' : 'Envoyer' }}</button>
+    </div>
+  </app-modal>
+}

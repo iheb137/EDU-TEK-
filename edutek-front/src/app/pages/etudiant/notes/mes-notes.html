@@ -1,0 +1,80 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Scolarité</p>
+    <h1>Mes notes</h1>
+    <p class="intro">Les notes publiées par vos enseignants, regroupées par matière. Les moyennes de matière restent provisoires tant que les résultats du semestre ne sont pas publiés.</p>
+  </div>
+  <div class="boutons">
+    @if (semestres().length) {
+      <label class="choix">
+        <span class="visuel-cache">Semestre</span>
+        <select (change)="choisir($any($event.target).value)" aria-label="Choisir le semestre">
+          @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestreId()">{{ s.nom }}</option> }
+        </select>
+      </label>
+    }
+    <a class="btn clair" routerLink="/mon-bulletin" [queryParams]="{ semestre: semestreId() }"><app-icon nom="reader" [taille]="18" />Voir le bulletin</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+@if (chargement()) {
+  <section class="carte bloc rise"><p class="vide" style="padding:0">Chargement…</p></section>
+} @else if (!erreur()) {
+  @if (!semestres().length) {
+    <section class="carte bloc rise"><p class="vide-bloc"><strong>Aucun semestre défini.</strong>Vos notes apparaîtront ici dès qu'un semestre sera ouvert.</p></section>
+  } @else {
+    <p class="resume rise" style="animation-delay: .08s">
+      <span class="puce indigo">{{ nbNotes() }} note{{ nbNotes() > 1 ? 's' : '' }} publiée{{ nbNotes() > 1 ? 's' : '' }}</span>
+      <span class="puce" [class.vert]="publie()" [class.orange]="!publie()">{{ publie() ? 'Résultats du semestre publiés' : 'Moyennes provisoires' }}</span>
+    </p>
+
+    @for (g of groupes(); track g.nom; let i = $index) {
+      <section class="carte matiere rise" [style.animation-delay]="(0.12 + i * 0.07) + 's'">
+        <div class="tete-matiere">
+          <div>
+            <h2>{{ g.nom }}</h2>
+            @if (g.ligne; as l) { <p class="note">{{ l.code }} · coefficient {{ nombre(l.coefficient) }} · {{ l.credits }} crédit{{ l.credits > 1 ? 's' : '' }}</p> }
+          </div>
+          @if (g.ligne?.moyenne != null) {
+            <div class="moyenne-matiere">
+              <span class="note">{{ publie() ? 'Moyenne' : 'Moyenne provisoire' }}</span>
+              <strong class="note-val" [class.faible]="g.ligne!.moyenne! < 10">{{ nombre(g.ligne!.moyenne) }}<span class="sur"> / 20</span></strong>
+              @if (g.ligne!.valide != null) { <span class="puce" [class.vert]="g.ligne!.valide" [class.rouge]="!g.ligne!.valide">{{ g.ligne!.valide ? 'Validée' : 'Non validée' }}</span> }
+            </div>
+          }
+        </div>
+        @if (g.notes.length) {
+          <div class="defile">
+            <table>
+              <thead><tr><th>Évaluation</th><th>Date</th><th>Note</th><th><span class="visuel-cache">Position sur 20</span></th></tr></thead>
+              <tbody>
+                @for (l of g.notes; track l.note.id) {
+                  <tr>
+                    <td><span class="nom">{{ l.evaluation?.type }}</span>@if (l.note.commentaire) { <br><span class="gris">{{ l.note.commentaire }}</span> }</td>
+                    <td class="gris">{{ date(l.evaluation?.date) }}</td>
+                    <td><span class="note-val" [class.faible]="l.note.valeur < 10">{{ nombre(l.note.valeur) }}</span><span class="sur"> / 20</span></td>
+                    <td class="col-piste"><div class="piste"><div class="remplissage" [style.width.%]="largeur(l.note.valeur)" [style.background]="couleur(l.note.valeur)"></div></div></td>
+                  </tr>
+                }
+              </tbody>
+            </table>
+          </div>
+        } @else {
+          <p class="vide-bloc">Aucune note publiée pour cette matière.</p>
+        }
+      </section>
+    } @empty {
+      @if (chargementBulletin()) {
+        <section class="carte bloc rise"><p class="vide" style="padding:0">Chargement…</p></section>
+      } @else {
+        <section class="carte bloc rise"><p class="vide-bloc"><strong>Aucune note pour {{ semestre()?.nom }}.</strong>Les notes apparaissent ici dès que vos enseignants les publient.</p></section>
+      }
+    }
+
+    @if (nonRattachees().length) {
+      <p class="note rise" style="margin-top:16px">{{ nonRattachees().length }} note{{ nonRattachees().length > 1 ? 's' : '' }} n'{{ nonRattachees().length > 1 ? 'ont' : 'a' }} pas pu être rattachée{{ nonRattachees().length > 1 ? 's' : '' }} à une évaluation de votre calendrier.</p>
+    }
+  }
+}

@@ -1,0 +1,95 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Suivi du risque</p>
+    <h1>Accompagnement</h1>
+    <p class="intro">Toutes les actions décidées par l'équipe pédagogique à la suite des alertes : entretiens, tutorat, soutien, orientation. Chaque action se met à jour depuis l'alerte à laquelle elle est rattachée.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/alertes"><app-icon nom="warning" [taille]="18" />Alertes</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+@if (avertissement()) { <p class="bandeau attention" role="status">{{ avertissement() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .08s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Rechercher un étudiant ou une action" aria-label="Rechercher un étudiant ou une action" [value]="recherche()" (input)="chercher($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Semestre" (change)="choisirSemestre($any($event.target).value)">
+    <option value="tous" [selected]="semestreId() === null">Tous les semestres</option>
+    @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestreId()">{{ s.nom }}</option> }
+  </select>
+  <select class="champ" aria-label="Type d'action" (change)="choisirType($any($event.target).value)">
+    <option value="">Tous les types d'action</option>
+    @for (t of typesAction; track t) { <option [value]="t" [selected]="t === type()">{{ libelleType(t) }}</option> }
+  </select>
+</div>
+
+@if (chargement()) {
+  <p class="vide carte rise">Chargement…</p>
+} @else if (!erreur()) {
+  <div class="resume rise" style="animation-delay: .12s">
+    @for (g of groupes(); track g.statut) {
+      <div class="carte stat"><span [class]="'statut ' + g.statut">{{ g.titre }}</span><strong class="chiffres">{{ g.lignes.length }}</strong></div>
+    }
+    <div class="carte stat"><span class="etiquette">Étudiants suivis</span><strong class="chiffres">{{ enSuivi() }}</strong></div>
+  </div>
+
+  @if (sansAction()) {
+    <p class="rappel rise" style="animation-delay: .16s">
+      <app-icon nom="information-circle" [taille]="18" />
+      <span>{{ sansAction() }} alerte{{ sansAction() > 1 ? 's ouvertes n\'ont' : ' ouverte n\'a' }} pas encore d'action d'accompagnement.</span>
+      <a class="lien" routerLink="/alertes" [queryParams]="parametresAlertes()">Voir ces alertes <app-icon nom="arrow-forward" [taille]="15" /></a>
+    </p>
+  }
+
+  <div class="tableau-suivi rise" style="animation-delay: .2s">
+    @for (g of actifs(); track g.statut) {
+      <ng-container *ngTemplateOutlet="colonne; context: { $implicit: g }" />
+    }
+  </div>
+
+  <div class="cloturees">
+    <button type="button" class="bascule" [attr.aria-expanded]="voirCloturees()" aria-controls="actions-cloturees" (click)="voirCloturees.set(!voirCloturees())">
+      <app-icon [nom]="voirCloturees() ? 'chevron-down' : 'chevron-forward'" [taille]="17" />
+      Actions clôturées ({{ nbClotures() }})
+    </button>
+    @if (voirCloturees()) {
+      <div class="tableau-suivi" id="actions-cloturees">
+        @for (g of clotures(); track g.statut) {
+          <ng-container *ngTemplateOutlet="colonne; context: { $implicit: g }" />
+        }
+      </div>
+    }
+  </div>
+}
+
+<ng-template #colonne let-g>
+  <section class="colonne" [attr.aria-label]="'Actions ' + g.titre.toLowerCase()">
+    <header>
+      <div class="ligne"><h2>{{ g.titre }}</h2><span class="compte">{{ g.lignes.length }}</span></div>
+      <p class="note">{{ g.aide }}</p>
+    </header>
+    @for (l of g.lignes; track l.action.id) {
+      <article class="fiche">
+        <div class="ligne haut">
+          <span class="type"><app-icon [nom]="iconeType(l.action.type)" [taille]="16" />{{ libelleType(l.action.type) }}</span>
+          <span class="note">{{ date(l.action.dateCreation) }}</span>
+        </div>
+        <p class="description" [title]="l.action.description">{{ l.action.description }}</p>
+        <div class="ligne bas">
+          <div class="etudiant">
+            <strong>{{ l.alerte.etudiantNom }}</strong>
+            <span class="gris">{{ l.alerte.etudiantMatricule }} · alerte {{ libelleStatutAlerte(l.alerte.statut).toLowerCase() }}</span>
+          </div>
+          <span [class]="'niveau ' + l.alerte.niveau" [title]="'Score ' + pourcent(l.alerte.score)">{{ libelleNiveau(l.alerte.niveau) }}</span>
+        </div>
+        <a class="lien" [routerLink]="['/alertes', l.alerte.id]" [attr.aria-label]="'Ouvrir l\'alerte de ' + l.alerte.etudiantNom">Ouvrir l'alerte <app-icon nom="arrow-forward" [taille]="15" /></a>
+      </article>
+    } @empty {
+      <p class="vide-colonne">{{ g.vide }}</p>
+    }
+  </section>
+</ng-template>

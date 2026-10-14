@@ -1,0 +1,103 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Suivi du risque</p>
+    <h1>Alertes</h1>
+    <p class="intro">Les alertes signalent les étudiants dont la situation mérite un échange. Le score aide à repérer ; l'examen de chaque situation et la décision restent celles de l'équipe pédagogique.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/accompagnement"><app-icon nom="heart" [taille]="18" />Accompagnement</a>
+    <a class="btn clair" routerLink="/predictions"><app-icon nom="analytics" [taille]="18" />Prédictions</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="compteurs rise" style="animation-delay: .08s" role="group" aria-label="Filtrer par statut">
+  @for (c of compteurs(); track c.statut) {
+    <button type="button" class="compteur" [class.actif]="statut() === c.statut" [attr.aria-pressed]="statut() === c.statut" (click)="choisirStatut(c.statut)">
+      <span class="etiquette"><span class="pastille" [style.background]="c.couleur"></span>{{ c.libelle }}</span>
+      <strong>{{ c.nombre }}</strong>
+    </button>
+  }
+</div>
+
+<div class="filtres rise" style="animation-delay: .14s">
+  <div class="recherche">
+    <app-icon nom="search" [taille]="18" />
+    <input type="search" placeholder="Rechercher un étudiant ou un matricule" aria-label="Rechercher un étudiant" [value]="recherche()" (input)="chercher($any($event.target).value)">
+  </div>
+  <select class="champ" aria-label="Semestre" (change)="choisirSemestre($any($event.target).value)">
+    <option value="tous" [selected]="semestreId() === null">Tous les semestres</option>
+    @for (s of semestres(); track s.id) { <option [value]="s.id" [selected]="s.id === semestreId()">{{ s.nom }}</option> }
+  </select>
+  <select class="champ" aria-label="Niveau de risque" (change)="choisirNiveau($any($event.target).value)">
+    <option value="" [selected]="!niveau()">Tous les niveaux</option>
+    @for (n of niveaux; track n) { <option [value]="n" [selected]="n === niveau()">Niveau {{ libelleNiveau(n).toLowerCase() }}</option> }
+  </select>
+  <select class="champ" aria-label="Statut" (change)="choisirStatut($any($event.target).value)">
+    <option value="" [selected]="!statut()">Tous les statuts</option>
+    @for (s of statuts; track s) { <option [value]="s" [selected]="s === statut()">{{ libelleStatut(s) }}</option> }
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .2s">
+  @if (chargement() && !alertes().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (filtrees().length) {
+    <div class="defile">
+      <table>
+        <thead>
+          <tr>
+            <th>Étudiant</th>
+            <th [attr.aria-sort]="tri() === 'desc' ? 'descending' : 'ascending'">
+              <button type="button" class="tri" (click)="inverserTri()" [attr.aria-label]="'Trier par score, ordre ' + (tri() === 'desc' ? 'croissant' : 'décroissant')">
+                Score <app-icon [nom]="tri() === 'desc' ? 'trending-down' : 'trending-up'" [taille]="15" />
+              </button>
+            </th>
+            <th>Niveau</th>
+            @if (semestreId() === null) { <th>Semestre</th> }
+            <th>Détectée le</th>
+            <th>Actions</th>
+            <th>Statut</th>
+            <th><span class="visuel-cache">Ouvrir</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (a of visibles(); track a.id) {
+            <tr class="cliquable" (click)="ouvrir(a)">
+              <td><a class="nom" [routerLink]="['/alertes', a.id]" (click)="$event.stopPropagation()">{{ a.etudiantNom }}</a><br><span class="gris">{{ a.etudiantMatricule }}</span></td>
+              <td><div class="score"><div class="piste fine"><div [class]="'remplissage ' + a.niveau" [style.width.%]="a.score * 100"></div></div><strong>{{ pourcent(a.score) }}</strong></div></td>
+              <td><span [class]="'niveau ' + a.niveau">{{ libelleNiveau(a.niveau) }}</span></td>
+              @if (semestreId() === null) { <td class="gris">{{ nomSemestre()(a.semestreId) }}</td> }
+              <td class="gris">{{ date(a.dateDetection) }}</td>
+              <td class="gris chiffres">{{ a.nbActions ? a.nbActions + ' action' + (a.nbActions > 1 ? 's' : '') : 'Aucune' }}</td>
+              <td><span [class]="'statut ' + a.statut">{{ libelleStatut(a.statut) }}</span></td>
+              <td>
+                <div class="actions">
+                  <a class="icone" [routerLink]="['/alertes', a.id]" title="Ouvrir l'alerte" [attr.aria-label]="'Ouvrir l\'alerte de ' + a.etudiantNom" (click)="$event.stopPropagation()"><app-icon nom="chevron-forward" [taille]="19" /></a>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span>{{ filtrees().length }} alerte{{ filtrees().length > 1 ? 's' : '' }} · page {{ page() + 1 }} sur {{ pages() }}</span>
+      <div class="boutons">
+        <button class="icone" type="button" aria-label="Page précédente" [disabled]="page() <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+        <button class="icone" type="button" aria-label="Page suivante" [disabled]="page() + 1 >= pages()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+      </div>
+    </div>
+  } @else if (!erreur()) {
+    <div class="vide">
+      @if (alertes().length) {
+        Aucune alerte ne correspond à ces filtres.
+        <button type="button" class="lien-btn" (click)="reinitialiser()">Effacer les filtres</button>
+      } @else {
+        Aucune alerte pour cette sélection. Les alertes apparaissent après une analyse lorsque le niveau calculé est moyen ou élevé.
+        <a class="lien" routerLink="/predictions">Lancer une analyse</a>
+      }
+    </div>
+  }
+</section>

@@ -1,0 +1,9 @@
+.recos { margin-top: 16px; display: flex; flex-direction: column; gap: 14px; }
+.reco { display: flex; align-items: flex-start; gap: 16px; padding: 20px 22px; border-left: 4px solid var(--indigo); }
+.reco.lue { border-left-color: var(--line); background: #fbfcfe;
+  .pastille { filter: grayscale(.6); opacity: .7; } p { color: var(--muted); } }
+.reco .corps { flex: 1; min-width: 0; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; strong { font-size: 15px; } }
+.reco p { margin: 8px 0 0; font-size: 14.5px; line-height: 1.6; }
+.action { flex-shrink: 0; align-self: center; }
+@media (max-width: 720px) { .reco { flex-wrap: wrap; } .action { width: 100%; } }

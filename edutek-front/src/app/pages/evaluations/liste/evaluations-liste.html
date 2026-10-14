@@ -1,0 +1,167 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Pédagogie</p>
+    <h1>Évaluations</h1>
+    <p class="intro">
+      @if (admin()) {
+        Planifiez les devoirs et examens de chaque enseignement, suivez l'avancement de la saisie des notes et ouvrez la grille de saisie.
+      } @else {
+        Vos devoirs et examens : planifiez-les, saisissez les notes de vos étudiants puis soumettez-les à l'administration pédagogique.
+      }
+    </p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/seances"><app-icon nom="calendar" [taille]="18" />Séances et présences</a>
+    <button class="btn indigo" type="button" [disabled]="!ref.enseignements().length" (click)="ouvrirCreation()"><app-icon nom="add" [taille]="18" />Nouvelle évaluation</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="filtres rise" style="animation-delay: .1s">
+  <select class="champ" aria-label="Filtrer par semestre" (change)="filtrer('semestre', $any($event.target).value)">
+    <option value="" [selected]="!semestre()">Tous les semestres</option>
+    @for (s of ref.semestres(); track s.id) { <option [value]="s.id" [selected]="semestre() === s.id">{{ s.nom }}</option> }
+  </select>
+  <select class="champ" aria-label="Filtrer par classe" (change)="filtrer('classe', $any($event.target).value)">
+    <option value="" [selected]="!classe()">Toutes les classes</option>
+    @for (c of ref.classes(); track c.id) { <option [value]="c.id" [selected]="classe() === c.id">{{ c.nom }}</option> }
+  </select>
+  <select class="champ large" aria-label="Filtrer par enseignement" (change)="filtrer('enseignement', $any($event.target).value)">
+    <option value="" [selected]="!enseignement()">Tous les enseignements</option>
+    @for (e of enseignementsFiltre(); track e.id) { <option [value]="e.id" [selected]="enseignement() === e.id">{{ ref.libelleEnseignement(e.id) }}</option> }
+  </select>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !evaluations()) {
+    <p class="vide">Chargement…</p>
+  } @else if (evaluations()) {
+    @if (filtrees().length) {
+      <div class="defile">
+        <table>
+          <thead><tr><th>Évaluation</th><th>Enseignement</th><th>Date et horaire</th><th>Salle</th><th class="num">Coef.</th><th>Saisie des notes</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+          <tbody>
+            @for (ev of pageCourante(); track ev.id) {
+              @let av = avancement().get(ev.id);
+              <tr>
+                <td>
+                  <a class="nom lien" [routerLink]="['/evaluations', ev.id]">{{ libelleType(ev.type) }}</a>
+                  @if (ev.anonyme) { <span class="puce gris marge">Anonyme</span> }
+                </td>
+                <td>{{ ref.matiereDe(ev.enseignementId)?.nom }}<br><span class="gris petit">{{ ref.classeDe(ev.enseignementId)?.nom }}</span></td>
+                <td>{{ date(ev.date) || '–' }}<br><span class="gris petit">{{ horaire(ev) }}</span></td>
+                <td>{{ ev.salle || '–' }}</td>
+                <td class="num">{{ nombre(ev.coefficient) || '–' }}</td>
+                <td>
+                  @if (av) {
+                    <div class="avancement" [attr.aria-label]="(av.brouillons + av.soumises) + ' notes sur ' + av.attendues">
+                      <div class="jauge"><span class="soumis" [style.width.%]="av.attendues ? av.soumises / av.attendues * 100 : 0"></span><span class="brouillon" [style.width.%]="av.attendues ? av.brouillons / av.attendues * 100 : 0"></span></div>
+                      <span class="petit">{{ av.brouillons + av.soumises }}/{{ av.attendues }}</span>
+                    </div>
+                    <div class="puces">
+                      @if (verrouillee(ev)) { <span class="puce gris">Clôturé</span> }
+                      @else if (av.brouillons) { <span class="puce orange">{{ av.brouillons }} brouillon{{ av.brouillons > 1 ? 's' : '' }}</span> }
+                      @else if (av.soumises && av.soumises >= av.attendues) { <span class="puce vert">Soumises</span> }
+                      @else if (!av.soumises) { <span class="puce">À saisir</span> }
+                    </div>
+                  } @else { <span class="gris petit">–</span> }
+                </td>
+                <td>
+                  <div class="actions">
+                    <a class="icone" [routerLink]="['/evaluations', ev.id]" title="Saisir les notes" [attr.aria-label]="'Saisir les notes : ' + libelleType(ev.type) + ' du ' + date(ev.date)"><app-icon nom="create" [taille]="19" /></a>
+                    <button class="icone" type="button" title="Modifier l'évaluation" [attr.aria-label]="'Modifier l\'évaluation du ' + date(ev.date)" [disabled]="verrouillee(ev)" (click)="ouvrirModification(ev)"><app-icon nom="pencil" [taille]="18" /></button>
+                    <button class="icone danger" type="button" [title]="suppressionInterdite(ev) || 'Supprimer l\'évaluation'" [attr.aria-label]="'Supprimer l\'évaluation du ' + date(ev.date)" [disabled]="!!suppressionInterdite(ev)" (click)="demanderSuppression(ev)"><app-icon nom="trash" [taille]="18" /></button>
+                  </div>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <div class="pagination">
+        <span>{{ filtrees().length }} évaluation{{ filtrees().length > 1 ? 's' : '' }} · page {{ numero() + 1 }} sur {{ pages() }}</span>
+        <div class="boutons">
+          <button class="icone" type="button" aria-label="Page précédente" [disabled]="numero() <= 0" (click)="aller(-1)"><app-icon nom="chevron-back" [taille]="19" /></button>
+          <button class="icone" type="button" aria-label="Page suivante" [disabled]="numero() + 1 >= pages()" (click)="aller(1)"><app-icon nom="chevron-forward" [taille]="19" /></button>
+        </div>
+      </div>
+    } @else if (!ref.enseignements().length) {
+      <p class="vide">Aucun enseignement ne vous est affecté pour le moment : les évaluations apparaîtront ici dès qu'un enseignement vous sera attribué.</p>
+    } @else {
+      <p class="vide">Aucune évaluation pour ces critères. Changez de semestre ou de classe, ou créez une évaluation.</p>
+    }
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('formulaire') {
+    <app-modal [titre]="cible() ? 'Modifier l\'évaluation' : 'Nouvelle évaluation'" [largeur]="640" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="ev-ens">Enseignement</label>
+          <select id="ev-ens" formControlName="enseignementId">
+            <option [ngValue]="0" disabled>Choisir un enseignement</option>
+            @for (g of groupesFormulaire(); track g.semestre.id) {
+              <optgroup [label]="g.semestre.nom">
+                @for (e of g.enseignements; track e.id) { <option [ngValue]="e.id">{{ ref.libelleEnseignement(e.id) }}</option> }
+              </optgroup>
+            }
+          </select>
+          @if (formulaire.controls.enseignementId.touched && formulaire.controls.enseignementId.invalid) { <span class="erreur-champ">Choisissez un enseignement.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="ev-type">Type</label>
+          <select id="ev-type" formControlName="type">
+            @for (t of typesProposes(); track t.code) { <option [value]="t.code">{{ t.libelle }}</option> }
+          </select>
+        </div>
+        <div class="champ-f">
+          <label for="ev-coef">Coefficient</label>
+          <input id="ev-coef" type="number" step="0.05" min="0" formControlName="coefficient">
+          @if (formulaire.controls.coefficient.touched && formulaire.controls.coefficient.invalid) { <span class="erreur-champ">Coefficient obligatoire, strictement positif.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="ev-date">Date</label>
+          <input id="ev-date" type="date" formControlName="date">
+          @if (formulaire.controls.date.touched && formulaire.controls.date.invalid) { <span class="erreur-champ">Date obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="ev-heure">Heure de début</label>
+          <input id="ev-heure" type="time" formControlName="heureDebut">
+        </div>
+        <div class="champ-f">
+          <label for="ev-duree">Durée (minutes)</label>
+          <input id="ev-duree" type="number" min="1" step="15" formControlName="dureeMinutes">
+          @if (formulaire.controls.dureeMinutes.touched && formulaire.controls.dureeMinutes.invalid) { <span class="erreur-champ">Entre 1 et 600 minutes.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="ev-salle">Salle</label>
+          <input id="ev-salle" formControlName="salle" autocomplete="off" placeholder="ex. B12">
+        </div>
+        <label class="case-f large"><input type="checkbox" formControlName="anonyme">
+          <span><strong>Correction anonyme</strong><br><span class="gris">Les copies sont corrigées sans nom : la saisie des notes est alors réservée à l'administration pédagogique.</span></span>
+        </label>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : (cible() ? 'Enregistrer' : 'Créer l\'évaluation') }}</button>
+      </div>
+    </app-modal>
+  }
+  @case ('supprimer') {
+    <app-modal titre="Supprimer l'évaluation" [largeur]="500" (fermer)="fermer()">
+      @if (cible(); as c) {
+        <p class="texte">Supprimer définitivement <strong>{{ libelleType(c.type) }}</strong> du {{ date(c.date) || '(date non précisée)' }} · {{ ref.libelleEnseignement(c.enseignementId) }} ?</p>
+        @if (notesSaisies(c)) { <p class="texte alerte">Les {{ notesSaisies(c) }} note{{ notesSaisies(c) > 1 ? 's' : '' }} déjà saisie{{ notesSaisies(c) > 1 ? 's' : '' }} pour cette évaluation seront également supprimées.</p> }
+      }
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn rouge" type="button" [disabled]="enCours()" (click)="supprimer()">{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+      </div>
+    </app-modal>
+  }
+}

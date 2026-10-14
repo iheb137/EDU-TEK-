@@ -1,0 +1,57 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Administration · {{ auth.session()?.etablissement }}</p>
+    <h1>Tableau de bord</h1>
+    <p class="intro">Vue d'ensemble des comptes, des rôles et de l'activité récente de l'établissement.</p>
+  </div>
+  <div class="boutons">
+    <a class="btn clair" routerLink="/utilisateurs" [queryParams]="{ import: 1 }"><app-icon nom="cloud-upload" [taille]="18" />Importer des comptes</a>
+    <a class="btn indigo" routerLink="/utilisateurs" [queryParams]="{ creer: 1 }"><app-icon nom="person-add" [taille]="18" />Créer un compte</a>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="indicateurs" aria-label="Indicateurs">
+  @for (k of indicateurs(); track k.titre; let i = $index) {
+    <article class="carte rise" [style.animation-delay]="delai(i)">
+      <div class="ligne"><span class="titre">{{ k.titre }}</span><span class="pastille" [style.background]="k.couleur"><app-icon [nom]="k.icone" [taille]="21" /></span></div>
+      <div class="valeur">{{ chargement() ? '…' : k.valeur }}</div>
+      <span class="note">{{ k.note }}</span>
+    </article>
+  }
+</section>
+
+<div class="duo">
+  <section class="carte rise grand" style="animation-delay: .45s">
+    <div class="ligne"><h2>Comptes par rôle</h2>@if (partiel()) { <span class="note">Sur les 100 premiers comptes</span> }</div>
+    @if (parRole().length) {
+      <div class="roles">
+        @for (r of parRole(); track r.role; let i = $index) {
+          <div>
+            <div class="ligne"><strong>{{ r.libelle }}</strong><span class="note">{{ r.n }} compte{{ r.n > 1 ? 's' : '' }}</span></div>
+            <div class="piste"><div class="remplissage" [style.width.%]="r.part" [style.animation-delay]="delai(i, 0.7)"></div></div>
+          </div>
+        }
+      </div>
+    } @else { <p class="vide" style="padding-left:0">{{ chargement() ? 'Chargement…' : 'Aucun compte pour le moment.' }}</p> }
+  </section>
+
+  <section class="carte rise petit" style="animation-delay: .55s">
+    <h2>Activité récente</h2>
+    @if (recents().length) {
+      <ul class="activite">
+        @for (a of recents(); track a.id) {
+          <li><span><strong>{{ a.action }}</strong> · {{ a.acteurEmail }}</span><span class="quand">{{ quand(a.horodatage) }}</span></li>
+        }
+      </ul>
+      <a class="lien" routerLink="/audit">Journal complet <app-icon nom="arrow-forward" [taille]="16" /></a>
+    } @else { <p class="vide" style="padding-left:0">{{ chargement() ? 'Chargement…' : 'Aucune activité enregistrée.' }}</p> }
+  </section>
+</div>
+
+<section class="raccourcis" aria-label="Raccourcis">
+  <a class="carte raccourci rise" style="animation-delay: .7s" routerLink="/utilisateurs"><span class="pastille"><app-icon nom="people" [taille]="21" /></span><span><strong>Gérer les utilisateurs</strong><span class="sous">Rôles, activation, mots de passe</span></span></a>
+  <a class="carte raccourci rise" style="animation-delay: .78s" routerLink="/audit"><span class="pastille"><app-icon nom="shield-checkmark" [taille]="21" /></span><span><strong>Consulter l'audit</strong><span class="sous">Connexions et actions sensibles</span></span></a>
+  <a class="carte raccourci rise" style="animation-delay: .86s" routerLink="/pedagogie"><span class="pastille"><app-icon nom="school" [taille]="21" /></span><span><strong>Vue pédagogique</strong><span class="sous">Suivi des étudiants et alertes IA</span></span></a>
+</section>

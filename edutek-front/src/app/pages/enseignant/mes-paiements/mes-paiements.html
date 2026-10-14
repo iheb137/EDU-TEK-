@@ -1,0 +1,86 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Enseignement</p>
+    <h1>Mes paiements</h1>
+    <p class="intro">Retrouvez vos états de paiement mensuels une fois validés par le service financier, avec le détail des séances rémunérées et le tarif horaire appliqué.</p>
+  </div>
+</div>
+
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<section class="indicateurs" aria-label="Synthèse">
+  <article class="carte rise" style="animation-delay: .08s">
+    <div class="ligne"><span class="titre">À verser</span><span class="pastille" style="background: var(--indigo)"><app-icon nom="hourglass" [taille]="20" /></span></div>
+    <div class="valeur chiffre">{{ chargement() ? '…' : montantFr(synthese().aVerser) }}</div>
+    <span class="note">{{ synthese().nbAVerser }} état{{ synthese().nbAVerser > 1 ? 's' : '' }} validé{{ synthese().nbAVerser > 1 ? 's' : '' }}, en attente de versement</span>
+  </article>
+  <article class="carte rise" style="animation-delay: .14s">
+    <div class="ligne"><span class="titre">Versé en {{ synthese().annee }}</span><span class="pastille" style="background: var(--risk-low)"><app-icon nom="wallet" [taille]="20" /></span></div>
+    <div class="valeur chiffre">{{ chargement() ? '…' : montantFr(synthese().verseAnnee) }}</div>
+    <span class="note">États marqués comme payés</span>
+  </article>
+  <article class="carte rise" style="animation-delay: .2s">
+    <div class="ligne"><span class="titre">Heures rémunérées en {{ synthese().annee }}</span><span class="pastille" style="background: var(--navy-800)"><app-icon nom="time" [taille]="20" /></span></div>
+    <div class="valeur chiffre">{{ chargement() ? '…' : dureeFr(synthese().minutesAnnee) }}</div>
+    <span class="note">États validés et payés</span>
+  </article>
+</section>
+
+<section class="carte tableau rise" style="animation-delay: .26s">
+  @if (chargement() && !liste().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Période</th><th class="droite">Séances</th><th class="droite">Durée</th><th class="droite">Montant</th><th>Statut</th><th>Suivi</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (p of liste(); track p.id) {
+            <tr>
+              <td><span class="nom">{{ periodeFr(p.periode) }}</span></td>
+              <td class="droite chiffre">{{ p.lignes?.length ?? '' }}</td>
+              <td class="droite chiffre">{{ dureeFr(p.minutes) }}</td>
+              <td class="droite chiffre"><strong>{{ montantFr(p.montant) }}</strong></td>
+              <td><span [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span></td>
+              <td class="gris">@if (p.datePaiement) { Payé le {{ dateFr(p.datePaiement) }} } @else if (p.dateValidation) { Validé le {{ dateFr(p.dateValidation) }} }</td>
+              <td>
+                <div class="actions">
+                  <button class="icone" type="button" title="Détail des séances" [attr.aria-label]="'Détail de l\'état de ' + periodeFr(p.periode)" (click)="cible.set(p)"><app-icon nom="receipt" [taille]="19" /></button>
+                  <button class="icone" type="button" title="Exporter (CSV)" [attr.aria-label]="'Exporter l\'état de ' + periodeFr(p.periode)" (click)="exporter(p)"><app-icon nom="download" [taille]="19" /></button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide">Aucun état de paiement validé pour le moment. Vos séances pointées et validées par la finance seront reprises dans l'état du mois concerné.</p>
+  }
+</section>
+
+@if (cible(); as p) {
+  <app-modal [titre]="'État de paiement · ' + periodeFr(p.periode)" [largeur]="680" (fermer)="cible.set(null)">
+    <div class="recap">
+      <span [class]="'puce ' + statut(p.statut).classe">{{ statut(p.statut).libelle }}</span>
+      @if (p.dateValidation) { &nbsp;Validé le {{ dateFr(p.dateValidation) }} }
+      @if (p.datePaiement) { · payé le {{ dateFr(p.datePaiement) }} }
+    </div>
+    @if (p.lignes?.length) {
+      <div class="petit-tableau">
+        <table>
+          <thead><tr><th>Date</th><th>Matière</th><th class="droite">Durée</th><th class="droite">Tarif horaire</th><th class="droite">Montant</th></tr></thead>
+          <tbody>
+            @for (l of p.lignes; track l.pointageId) {
+              <tr><td class="chiffre">{{ dateFr(l.date) }}</td><td>{{ l.matiereNom }}</td><td class="droite chiffre">{{ dureeFr(l.minutes) }}</td><td class="droite chiffre">{{ montantFr(l.tarifHoraire) }}</td><td class="droite chiffre">{{ montantFr(l.montant) }}</td></tr>
+            }
+          </tbody>
+          <tfoot><tr><td colspan="2">Total</td><td class="droite chiffre">{{ dureeFr(p.minutes) }}</td><td></td><td class="droite chiffre">{{ montantFr(p.montant) }}</td></tr></tfoot>
+        </table>
+      </div>
+    } @else { <p class="vide" style="padding-left:0">Aucune ligne dans cet état.</p> }
+    <div class="pied">
+      <button class="btn clair" type="button" (click)="exporter(p)"><app-icon nom="download" [taille]="18" />Exporter (CSV)</button>
+      <button class="btn indigo" type="button" (click)="cible.set(null)">Fermer</button>
+    </div>
+  </app-modal>
+}

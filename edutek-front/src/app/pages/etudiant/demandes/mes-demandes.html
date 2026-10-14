@@ -1,0 +1,84 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Démarches</p>
+    <h1>Mes demandes de documents</h1>
+    <p class="intro">Demandez une attestation ou un relevé de notes à l'administration. Vous êtes notifié lorsque le document est prêt : il se retire ensuite au bureau de l'administration, muni de votre carte d'étudiant.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn indigo" type="button" (click)="ouvrirCreation()"><app-icon nom="add" [taille]="18" />Nouvelle demande</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+@if (aRetirer().length) {
+  <p class="bandeau ok" role="status" style="margin-top:18px">
+    <strong>{{ aRetirer().length === 1 ? 'Un document vous attend' : aRetirer().length + ' documents vous attendent' }} à l'administration.</strong>
+    Présentez-vous au bureau muni de votre carte d'étudiant pour le retirer.
+  </p>
+}
+
+<section class="carte tableau rise" style="animation-delay: .1s; margin-top: 22px">
+  @if (chargement()) {
+    <p class="vide">Chargement…</p>
+  } @else if (liste().length) {
+    <div class="ligne tete"><h2>Demandes</h2><span class="note">{{ liste().length }} au total · {{ nbOuvertes() }} en cours</span></div>
+    <div class="defile">
+      <table>
+        <thead><tr><th>Document</th><th>Demandé le</th><th>Statut</th><th>Suivi</th></tr></thead>
+        <tbody>
+          @for (d of liste(); track d.id) {
+            <tr>
+              <td><span class="nom">{{ type(d.typeDocument) }}</span><br><span class="gris">Demande n° {{ d.id }}</span></td>
+              <td class="gris" style="white-space:nowrap">{{ dateHeure(d.dateDemande) }}</td>
+              <td>
+                <span class="puce" [class.gris]="d.statut === 'SOUMIS'" [class.orange]="d.statut === 'EN_TRAITEMENT'" [class.vert]="d.statut === 'PRET' || d.statut === 'REMIS'" [class.rouge]="d.statut === 'REJETE'">{{ statut(d.statut) }}</span>
+                @if (d.statut === 'REJETE' && d.motifRejet) { <span class="motif-rejet">Motif : {{ d.motifRejet }}</span> }
+              </td>
+              <td class="gris suivi">
+                @switch (d.statut) {
+                  @case ('SOUMIS') { En attente de prise en charge par l'administration. }
+                  @case ('EN_TRAITEMENT') { L'administration prépare votre document. }
+                  @case ('PRET') {
+                    <strong class="a-retirer">À retirer au bureau</strong>@if (d.datePret) { depuis le {{ dateHeure(d.datePret) }}}.
+                    Munissez-vous de votre carte d'étudiant.
+                    @if (d.messageRetrait) { <span class="consigne">{{ d.messageRetrait }}</span> }
+                  }
+                  @case ('REMIS') { Retiré le {{ dateHeure(d.dateRemise) }}. }
+                  @case ('REJETE') { Vous pouvez déposer une nouvelle demande. }
+                }
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide-bloc"><strong>Aucune demande pour l'instant.</strong>Attestation d'inscription, attestation de présence, relevé de notes : faites votre demande, l'administration la prépare et vous prévient quand le document est à retirer.</p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('creer') {
+    <app-modal titre="Nouvelle demande de document" [largeur]="520" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="creer()" novalidate>
+        <div class="champ-f large">
+          <label for="d-type">Document souhaité</label>
+          <select id="d-type" formControlName="typeDocument">
+            <option value="" disabled>Choisir un document</option>
+            @for (t of types; track t[0]) {
+              <option [value]="t[0]" [disabled]="typesOuverts().has(t[0])">{{ t[1] }}{{ typesOuverts().has(t[0]) ? ' (demande déjà en cours)' : '' }}</option>
+            }
+          </select>
+          @if (formulaire.controls.typeDocument.touched && formulaire.controls.typeDocument.invalid) { <span class="erreur-champ">Choisissez un document.</span> }
+          <span class="aide">Une seule demande en cours par type de document.</span>
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="creer()">{{ enCours() ? 'Envoi…' : 'Envoyer la demande' }}</button>
+      </div>
+    </app-modal>
+  }
+}

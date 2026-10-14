@@ -17,6 +17,12 @@ import java.util.Map;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    public ResponseEntity<Map<String, String>> tropVolumineux(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        return ResponseEntity.status(org.springframework.http.HttpStatus.PAYLOAD_TOO_LARGE)
+                .body(Map.of("erreur", "Fichier trop volumineux : 20 Mo maximum"));
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<Map<String, String>> statut(ResponseStatusException e) {
         String message = e.getReason() != null ? e.getReason() : "Erreur";

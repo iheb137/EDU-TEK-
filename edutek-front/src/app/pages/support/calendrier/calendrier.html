@@ -1,0 +1,242 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Organisation</p>
+    <h1>Calendrier</h1>
+    <p class="intro">Vos séances de cours, évaluations et classes virtuelles, avec les temps forts de l'année universitaire : rentrée, vacances, jours fériés et périodes d'examens.</p>
+  </div>
+  <div class="boutons">
+    @if (peutGerer) {
+      <button class="btn indigo" type="button" (click)="nouvelEvenement()"><app-icon nom="add" [taille]="18" />Nouvel événement</button>
+    }
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="barre rise" style="animation-delay: .1s">
+  <div class="navigation">
+    <button class="icone" type="button" title="Mois précédent" aria-label="Mois précédent" (click)="decaler(-1)"><app-icon nom="chevron-back" [taille]="20" /></button>
+    <button class="btn clair" type="button" (click)="aujourdhui()">Aujourd'hui</button>
+    <button class="icone" type="button" title="Mois suivant" aria-label="Mois suivant" (click)="decaler(1)"><app-icon nom="chevron-forward" [taille]="20" /></button>
+    <h2 class="periode" aria-live="polite">{{ titrePeriode() }}</h2>
+    @if (chargement()) { <span class="note">Chargement…</span> }
+  </div>
+  <div class="onglets" role="tablist" aria-label="Mode d'affichage">
+    <button class="onglet" type="button" role="tab" [class.actif]="vue() === 'mois'" [attr.aria-selected]="vue() === 'mois'" (click)="vue.set('mois')"><app-icon nom="grid" [taille]="16" />Mois</button>
+    <button class="onglet" type="button" role="tab" [class.actif]="vue() === 'liste'" [attr.aria-selected]="vue() === 'liste'" (click)="vue.set('liste')"><app-icon nom="list" [taille]="16" />Liste</button>
+  </div>
+</div>
+
+<div class="legende rise" style="animation-delay: .14s" aria-label="Catégories affichées">
+  @for (c of categories; track c.valeur) {
+    <button type="button" class="filtre-cat" [class]="'filtre-cat cat-' + c.valeur" [class.eteint]="!actives().has(c.valeur)" [attr.aria-pressed]="actives().has(c.valeur)" (click)="basculer(c.valeur)">
+      <span class="pastille-cat" aria-hidden="true"></span>{{ c.libelle }}<span class="compte">{{ comptes()[c.valeur] ?? 0 }}</span>
+    </button>
+  }
+</div>
+
+@if (vue() === 'mois') {
+  <section class="carte mois rise" style="animation-delay: .18s" aria-label="Vue mensuelle">
+    <div class="entete-semaine" aria-hidden="true">@for (j of joursSemaine; track j) { <span>{{ j }}</span> }</div>
+    @for (s of semaines(); track s[0].iso) {
+      <div class="semaine">
+        @for (j of s; track j.iso) {
+          <div class="case" [class.hors]="j.horsMois" [class.weekend]="j.weekend" [class.auj]="j.aujourdhui">
+            <button class="numero" type="button" [attr.aria-label]="nomJour(j.iso) + ' : ' + j.elements.length + ' élément(s)'" (click)="ouvrirJour(j.iso)">{{ j.numero }}</button>
+            @for (e of j.elements.slice(0, maxParCase); track e.cle) {
+              <button type="button" [class]="'puce-cal cat-' + e.categorie" [title]="e.titre" (click)="ouvrirElement(e, $event)">
+                @if (e.heureDebut) { <span class="h">{{ heure(e.heureDebut) }}</span> }{{ e.titre }}
+              </button>
+            }
+            @if (j.elements.length > maxParCase) {
+              <button class="plus" type="button" (click)="ouvrirJour(j.iso)">+ {{ j.elements.length - maxParCase }} autre{{ j.elements.length - maxParCase > 1 ? 's' : '' }}</button>
+            }
+          </div>
+        }
+      </div>
+    }
+  </section>
+} @else {
+  <section class="carte liste rise" style="animation-delay: .18s" aria-label="Vue liste">
+    @if (chargement() && !elements()) {
+      <p class="vide">Chargement…</p>
+    } @else if (jours().length) {
+      @for (j of jours(); track j.iso) {
+        <div class="groupe" [class.auj]="j.aujourdhui">
+          <h3>{{ nomJour(j.iso) }}@if (j.aujourdhui) { <span class="puce">Aujourd'hui</span> }</h3>
+          <ul>
+            @for (e of j.elements; track e.cle) {
+              <li>
+                <button type="button" class="rangee" (click)="ouvrirElement(e)">
+                  <span class="horaire">{{ horaire(e) }}</span>
+                  <span [class]="'barre-cat cat-' + e.categorie" aria-hidden="true"></span>
+                  <span class="texte"><strong>{{ e.titre }}</strong><span class="gris">{{ details(e) }}</span></span>
+                  <span [class]="'etiquette cat-' + e.categorie">{{ libelleCategorie(e.categorie) }}</span>
+                </button>
+              </li>
+            }
+          </ul>
+        </div>
+      }
+    } @else {
+      <p class="vide">Rien de prévu en {{ titrePeriode().toLowerCase() }} pour les catégories sélectionnées.</p>
+    }
+  </section>
+}
+
+<section class="carte annuel rise" style="animation-delay: .26s">
+  <div class="ligne">
+    <div>
+      <h2>Calendrier académique {{ anneeUniversitaire().libelle }}</h2>
+      <p class="note" style="margin:4px 0 0">Événements valables pour tout l'établissement ou pour une formation.</p>
+    </div>
+  </div>
+  @if (annee() === null) {
+    <p class="vide" style="padding-left:0">Chargement…</p>
+  } @else if (annee()!.length) {
+    <ul class="evenements">
+      @for (ev of annee(); track ev.id) {
+        <li>
+          <span class="date-ev">{{ periode(ev.dateDebut, ev.dateFin) }}</span>
+          <span class="texte">
+            <strong>{{ ev.titre }}</strong>
+            <span class="puces"><span class="puce" [class]="'puce type-' + ev.type">{{ libelleType(ev.type) }}</span><span class="puce gris">{{ portee(ev) }}</span></span>
+            @if (ev.description) { <span class="gris desc">{{ ev.description }}</span> }
+          </span>
+          @if (peutGerer) {
+            <span class="actions">
+              <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier l\'événement ' + ev.titre" (click)="modifierEvenement(ev)"><app-icon nom="pencil" [taille]="18" /></button>
+              <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer l\'événement ' + ev.titre" (click)="demanderSuppression(ev)"><app-icon nom="trash" [taille]="18" /></button>
+            </span>
+          }
+        </li>
+      }
+    </ul>
+  } @else {
+    <p class="vide" style="padding-left:0">
+      Aucun événement n'est encore inscrit au calendrier de l'année {{ anneeUniversitaire().libelle }}.
+      @if (peutGerer) { Ajoutez la rentrée, les vacances et les périodes d'examens avec « Nouvel événement ». }
+    </p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('jour') {
+    <app-modal [titre]="nomJour(jourChoisi() ?? '')" [largeur]="600" (fermer)="fermer()">
+      @if (elementsDuJour().length) {
+        <ul class="jour-liste">
+          @for (e of elementsDuJour(); track e.cle) {
+            <li>
+              <button type="button" class="rangee" (click)="ouvrirElement(e)">
+                <span class="horaire">{{ horaire(e) }}</span>
+                <span [class]="'barre-cat cat-' + e.categorie" aria-hidden="true"></span>
+                <span class="texte"><strong>{{ e.titre }}</strong><span class="gris">{{ details(e) }}</span></span>
+              </button>
+            </li>
+          }
+        </ul>
+      } @else { <p class="gris" style="margin:0">Rien de prévu ce jour-là.</p> }
+      <div class="pied">
+        @if (peutGerer) {
+          <button class="btn clair" type="button" (click)="nouvelEvenement(); formulaire.controls.dateDebut.setValue(jourChoisi() ?? '')"><app-icon nom="add" [taille]="18" />Événement ce jour</button>
+        }
+        <button class="btn indigo" type="button" (click)="fermer()">Fermer</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('element') {
+    @if (choisi(); as e) {
+      <app-modal [titre]="e.titre" [largeur]="560" (fermer)="fermer()">
+        <dl class="fiche">
+          <dt>Catégorie</dt><dd><span [class]="'etiquette cat-' + e.categorie">{{ libelleCategorie(e.categorie) }}</span></dd>
+          @if (e.categorie === 'EVENEMENT') {
+            @if (e.evenement; as ev) {
+              <dt>Type</dt><dd>{{ libelleType(ev.type) }}</dd>
+              <dt>Période</dt><dd>{{ periode(ev.dateDebut, ev.dateFin) }}</dd>
+              <dt>Concerne</dt><dd>{{ portee(ev) }}</dd>
+              @if (ev.description) { <dt>Description</dt><dd class="citation">{{ ev.description }}</dd> }
+            } @else {
+              <dt>Période</dt><dd>{{ periode(e.debut, e.fin) }}</dd>
+            }
+          } @else {
+            <dt>Date</dt><dd>{{ nomJour(e.debut) }}</dd>
+            <dt>Horaire</dt><dd>{{ horaire(e) }}</dd>
+            @if (e.salle) { <dt>Salle</dt><dd>{{ e.salle }}</dd> }
+            @if (e.classe) { <dt>Classe</dt><dd>{{ e.classe }}</dd> }
+            @if (e.enseignant) { <dt>Enseignant</dt><dd>{{ e.enseignant }}</dd> }
+            @if (e.plateforme) { <dt>Plateforme</dt><dd>{{ libellePlateforme(e.plateforme) }}</dd> }
+            @if (e.codeAcces) { <dt>Code d'accès</dt><dd>{{ e.codeAcces }}</dd> }
+            @if (e.lien) { <dt>Lien</dt><dd><a class="lien" [href]="e.lien" target="_blank" rel="noopener noreferrer">Rejoindre la classe<app-icon nom="open" [taille]="16" /></a></dd> }
+          }
+        </dl>
+        <div class="pied">
+          @if (peutGerer && e.evenement; as ev) {
+            <button class="btn clair" type="button" (click)="demanderSuppression(ev)"><app-icon nom="trash" [taille]="18" />Supprimer</button>
+            <button class="btn clair" type="button" (click)="modifierEvenement(ev)"><app-icon nom="pencil" [taille]="18" />Modifier</button>
+          }
+          <button class="btn indigo" type="button" (click)="fermer()">Fermer</button>
+        </div>
+      </app-modal>
+    }
+  }
+
+  @case ('evenement') {
+    <app-modal [titre]="edition() ? 'Modifier l\'événement' : 'Nouvel événement'" [largeur]="620" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="e-titre">Intitulé</label>
+          <input id="e-titre" formControlName="titre" maxlength="150" placeholder="Ex. : Vacances d'hiver" autocomplete="off">
+          @if (formulaire.controls.titre.touched && formulaire.controls.titre.invalid) { <span class="erreur-champ">L'intitulé est obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="e-type">Type</label>
+          <select id="e-type" formControlName="type">
+            @for (t of typesEvenement; track t) { <option [value]="t">{{ libelleType(t) }}</option> }
+          </select>
+        </div>
+        <div class="champ-f">
+          <label for="e-formation">Concerne</label>
+          <select id="e-formation" formControlName="formationId">
+            <option value="">Tout l'établissement</option>
+            @for (f of formations(); track f.id) { <option [value]="f.id">{{ f.code }} · {{ f.nom }}</option> }
+          </select>
+        </div>
+        <div class="champ-f">
+          <label for="e-debut">Date de début</label>
+          <input id="e-debut" type="date" formControlName="dateDebut">
+          @if (formulaire.controls.dateDebut.touched && formulaire.controls.dateDebut.invalid) { <span class="erreur-champ">La date de début est obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="e-fin">Date de fin (facultative)</label>
+          <input id="e-fin" type="date" formControlName="dateFin" [min]="formulaire.controls.dateDebut.value">
+          @if (formulaire.hasError('ordre') && formulaire.controls.dateFin.touched) { <span class="erreur-champ">La date de fin précède la date de début.</span> }
+          @else { <span class="aide">Laissez vide pour un événement d'une journée.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="e-desc">Description (facultative)</label>
+          <textarea id="e-desc" formControlName="description" maxlength="1000"></textarea>
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : edition() ? 'Enregistrer' : 'Ajouter au calendrier' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('supprimer') {
+    @if (edition(); as ev) {
+      <app-modal titre="Supprimer l'événement" [largeur]="500" (fermer)="fermer()">
+        <p class="texte-boite">L'événement <strong>« {{ ev.titre }} »</strong> ({{ periode(ev.dateDebut, ev.dateFin) }}) sera retiré définitivement du calendrier. Les séances et les évaluations ne sont pas modifiées.</p>
+        @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+        <div class="pied">
+          <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+          <button class="btn rouge" type="button" [disabled]="enCours()" (click)="supprimer()">{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+        </div>
+      </app-modal>
+    }
+  }
+}

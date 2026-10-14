@@ -31,6 +31,15 @@ evaluation, service, integration) mais **les metriques ne disent rien sur la per
 appris les regles du generateur. Pour que ce soit impossible a oublier, un tel modele s'appelle `gru-risque-synth`, porte
 `donnees = SYNTHETIQUE` et le nom est visible dans le backend.
 
+**Simulateur du plan d'etudes TEK-UP** (`--source plan`, `app/plan_etudes.py` + `app/simulateur_plan.py`) : meme nature
+(donnees SYNTHETIQUES), mais la structure est celle du plan officiel GLSI 2024-2025, de S1 a S10 : modules, coefficients,
+ECTS, volumes horaires, prerequis. La moyenne du semestre est la moyenne ponderee des modules, les absences et l'engagement
+suivent un modele explicite, des etudiants abandonnent, les promotions sont observees a des dates differentes. Les parametres
+(`Parametres` : niveau par semestre, difficulte par domaine, bruit, abandon) peuvent etre calees sur des statistiques reelles
+**agregees** (taux de reussite par semestre) : le jeu produit `taux_echec_par_semestre` pour les comparer. Hypotheses a
+connaitre : S10 = PFE lu sur le plan SSIR, paniers optionnels de S9 hors totaux, une seance pointee = un bloc de 10,5 h, ecart de
+1 ECTS en S4 dans le document source. Le plan ne contient aucun resultat d'etudiant : ce jeu ne prouve rien sur la realite.
+
 Pour passer en reel : exporter du backend un CSV **pseudonymise** (jamais matricule, nom ni e-mail), le placer dans `data/`
 (ignore par Git) et lancer `python -m app.train --source csv --fichier data/export.csv`. Colonnes :
 `etudiant_id; semestre_id; date_debut; echec; MOYENNE_SEMESTRE; CREDITS_OBTENUS; NB_MATIERES_NON_VALIDEES; NB_SEANCES_POINTEES; TAUX_ABSENCE; TAUX_ABSENCE_NON_JUSTIFIEE; TENDANCE_MOYENNE`
@@ -40,6 +49,7 @@ Pour passer en reel : exporter du backend un CSV **pseudonymise** (jamais matric
 
 ```powershell
 python -m app.train --source synthetic --etudiants 5000 --graine 42 --activer
+python -m app.train --source plan --etudiants 5000 --graine 42 --activer     # simulateur du plan d'etudes
 ```
 
 La procedure : jeu de donnees, separation **par etudiant** (70/15/15, aucun etudiant dans deux ensembles), Adam avec

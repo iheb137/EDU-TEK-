@@ -1,0 +1,173 @@
+<div class="entete rise">
+  <div>
+    <p class="surtitre">Enseignement</p>
+    <h1>Classes virtuelles</h1>
+    <p class="intro">Planifiez vos cours à distance, partagez le lien de connexion avec la classe et déposez les supports de cours. Les étudiants sont prévenus à la création et à chaque changement d'horaire.</p>
+  </div>
+  <div class="boutons">
+    <button class="btn indigo" type="button" (click)="ouvrirCreation()"><app-icon nom="add" [taille]="18" />Planifier une classe virtuelle</button>
+  </div>
+</div>
+
+@if (info()) { <p class="bandeau ok" role="status">{{ info() }}</p> }
+@if (erreur()) { <p class="bandeau" role="alert">{{ erreur() }}</p> }
+
+<div class="onglets rise" style="animation-delay: .1s" role="tablist" aria-label="Période">
+  <button type="button" role="tab" [class.actif]="filtre() === 'avenir'" [attr.aria-selected]="filtre() === 'avenir'" (click)="filtrer('avenir')">À venir <span class="compte">{{ nbAvenir() }}</span></button>
+  <button type="button" role="tab" [class.actif]="filtre() === 'passees'" [attr.aria-selected]="filtre() === 'passees'" (click)="filtrer('passees')">Passées</button>
+  <button type="button" role="tab" [class.actif]="filtre() === 'toutes'" [attr.aria-selected]="filtre() === 'toutes'" (click)="filtrer('toutes')">Toutes <span class="compte">{{ liste().length }}</span></button>
+</div>
+
+<section class="carte tableau rise" style="animation-delay: .18s">
+  @if (chargement() && !liste().length) {
+    <p class="vide">Chargement…</p>
+  } @else if (visibles().length) {
+    <div class="defile">
+      <table>
+        <thead><tr><th>Date et heure</th><th>Enseignement</th>@if (admin) { <th>Enseignant</th> }<th>Plateforme</th><th>Accès</th><th><span class="visuel-cache">Actions</span></th></tr></thead>
+        <tbody>
+          @for (c of visibles(); track c.id) {
+            <tr [class.passee]="estPassee(c)">
+              <td class="chiffre"><span class="nom">{{ dateHeureFr(c.dateHeure) }}</span>@if (estPassee(c)) { <span class="sous">Terminée</span> }</td>
+              <td>{{ libelleEnseignement(c) }}</td>
+              @if (admin) { <td class="gris">{{ c.enseignantNom }}</td> }
+              <td><span class="puce">{{ libellePlateforme(c.plateforme) }}</span></td>
+              <td class="acces">
+                <a class="lien-externe" [href]="c.lien" target="_blank" rel="noopener noreferrer" [title]="c.lien"><app-icon nom="open" [taille]="15" />Rejoindre</a>
+                @if (c.codeAcces) { <span class="sous">Code : <code>{{ c.codeAcces }}</code></span> }
+              </td>
+              <td>
+                <div class="actions">
+                  <button class="icone" type="button" title="Supports de cours" [attr.aria-label]="'Supports de cours du ' + dateHeureFr(c.dateHeure)" (click)="ouvrirSupports(c)"><app-icon nom="document-attach" [taille]="19" /></button>
+                  <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier la classe virtuelle du ' + dateHeureFr(c.dateHeure)" (click)="ouvrirModification(c)"><app-icon nom="pencil" [taille]="19" /></button>
+                  <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer la classe virtuelle du ' + dateHeureFr(c.dateHeure)" (click)="demanderSuppression(c)"><app-icon nom="trash" [taille]="19" /></button>
+                </div>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else if (!erreur()) {
+    <p class="vide">
+      @switch (filtre()) {
+        @case ('avenir') { Aucune classe virtuelle à venir. Utilisez « Planifier une classe virtuelle » pour en programmer une. }
+        @case ('passees') { Aucune classe virtuelle passée. }
+        @default { Aucune classe virtuelle pour le moment. }
+      }
+    </p>
+  }
+</section>
+
+@switch (fenetre()) {
+  @case ('form') {
+    <app-modal [titre]="cible() ? 'Modifier la classe virtuelle' : 'Planifier une classe virtuelle'" [largeur]="620" (fermer)="fermer()">
+      <form class="formulaire" [formGroup]="formulaire" (ngSubmit)="enregistrer()" novalidate>
+        <div class="champ-f large">
+          <label for="cv-ens">Enseignement</label>
+          <select id="cv-ens" formControlName="enseignementId">
+            <option [ngValue]="0" disabled>Choisir un enseignement</option>
+            @for (e of enseignements(); track e.id) { <option [ngValue]="e.id">{{ e.libelle }} · {{ e.semestre }}</option> }
+          </select>
+          @if (cible()) { <span class="aide">L'enseignement d'une classe virtuelle n'est pas modifiable.</span> }
+          @if (formulaire.controls.enseignementId.touched && formulaire.controls.enseignementId.invalid) { <span class="erreur-champ">Choisissez un enseignement.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="cv-plat">Plateforme</label>
+          <select id="cv-plat" formControlName="plateforme">
+            @for (p of plateformes; track p.code) { <option [value]="p.code">{{ p.libelle }}</option> }
+          </select>
+        </div>
+        <div class="champ-f">
+          <label for="cv-date">Date et heure</label>
+          <input id="cv-date" type="datetime-local" formControlName="dateHeure">
+          @if (formulaire.controls.dateHeure.touched && formulaire.controls.dateHeure.hasError('required')) { <span class="erreur-champ">Obligatoire.</span> }
+          @if (formulaire.controls.dateHeure.hasError('passe')) { <span class="erreur-champ">La date doit être dans le futur.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="cv-lien">Lien de connexion</label>
+          <input id="cv-lien" type="url" formControlName="lien" placeholder="https://meet.google.com/…" autocomplete="off">
+          @if (formulaire.controls.lien.touched && formulaire.controls.lien.invalid) { <span class="erreur-champ">Saisissez une adresse commençant par http:// ou https://, sans espace.</span> }
+        </div>
+        <div class="champ-f large">
+          <label for="cv-code">Code d'accès (facultatif)</label>
+          <input id="cv-code" formControlName="codeAcces" autocomplete="off">
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrer()">{{ enCours() ? 'Enregistrement…' : (cible() ? 'Enregistrer' : 'Planifier') }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('supprimer') {
+    <app-modal titre="Supprimer la classe virtuelle" [largeur]="500" (fermer)="fermer()">
+      <div class="recap"><strong>{{ libelleEnseignement(cible()!) }}</strong><br>{{ dateHeureFr(cible()?.dateHeure) }} · {{ libellePlateforme(cible()?.plateforme ?? '') }}</div>
+      <p class="gris" style="margin:0;font-size:14px;line-height:1.55">La classe virtuelle et ses supports de cours seront supprimés définitivement.</p>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        <button class="btn clair" type="button" (click)="fermer()">Annuler</button>
+        <button class="btn rouge" type="button" [disabled]="enCours()" (click)="supprimer()"><app-icon nom="trash" [taille]="18" />{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+      </div>
+    </app-modal>
+  }
+
+  @case ('supports') {
+    <app-modal titre="Supports de cours" [largeur]="720" (fermer)="fermer()">
+      <p class="gris" style="margin:0 0 4px">{{ libelleEnseignement(cible()!) }} · {{ dateHeureFr(cible()?.dateHeure) }}</p>
+      @if (infoSupports()) { <p class="bandeau ok" role="status">{{ infoSupports() }}</p> }
+      @if (chargementSupports() && !supports().length) {
+        <p class="vide" style="padding-left:0">Chargement…</p>
+      } @else if (supports().length) {
+        <ul class="supports">
+          @for (s of supports(); track s.id) {
+            <li [class.edite]="supportEdite()?.id === s.id">
+              <span class="puce" [class.gris]="s.type === 'AUTRE'">{{ libelleSupport(s.type) }}</span>
+              <span class="texte"><a [href]="s.url" target="_blank" rel="noopener noreferrer">{{ s.titre }}</a><span class="sous">{{ s.url }}@if (s.dateDepot) { · déposé le {{ dateFr(s.dateDepot) }} }</span></span>
+              @if (supportASupprimer()?.id === s.id) {
+                <span class="confirmer" role="group" aria-label="Confirmer la suppression">
+                  <span class="danger-texte">Supprimer ce support ?</span>
+                  <button class="mini" type="button" (click)="supportASupprimer.set(null)">Annuler</button>
+                  <button class="mini rouge" type="button" [disabled]="enCours()" (click)="supprimerSupport()">{{ enCours() ? 'Suppression…' : 'Supprimer' }}</button>
+                </span>
+              } @else {
+                <span class="actions">
+                  <button class="icone" type="button" title="Modifier" [attr.aria-label]="'Modifier le support ' + s.titre" (click)="modifierSupport(s)"><app-icon nom="pencil" [taille]="18" /></button>
+                  <button class="icone danger" type="button" title="Supprimer" [attr.aria-label]="'Supprimer le support ' + s.titre" (click)="supportASupprimer.set(s)"><app-icon nom="trash" [taille]="18" /></button>
+                </span>
+              }
+            </li>
+          }
+        </ul>
+      } @else { <p class="vide" style="padding-left:0">Aucun support pour cette classe virtuelle. Ajoutez un lien vers un document, une vidéo ou une page.</p> }
+
+      <h3 class="sous-titre">{{ supportEdite() ? 'Modifier le support' : 'Ajouter un support' }}</h3>
+      <form class="formulaire" [formGroup]="formSupport" (ngSubmit)="enregistrerSupport()" novalidate>
+        <div class="champ-f">
+          <label for="sp-titre">Titre</label>
+          <input id="sp-titre" formControlName="titre" autocomplete="off">
+          @if (formSupport.controls.titre.touched && formSupport.controls.titre.invalid) { <span class="erreur-champ">Obligatoire.</span> }
+        </div>
+        <div class="champ-f">
+          <label for="sp-type">Type</label>
+          <select id="sp-type" formControlName="type">
+            @for (t of typesSupport; track t.code) { <option [value]="t.code">{{ t.libelle }}</option> }
+          </select>
+        </div>
+        <div class="champ-f large">
+          <label for="sp-url">Adresse (URL)</label>
+          <input id="sp-url" type="url" formControlName="url" placeholder="https://…" autocomplete="off">
+          @if (formSupport.controls.url.touched && formSupport.controls.url.invalid) { <span class="erreur-champ">Saisissez une adresse commençant par http:// ou https://, sans espace.</span> }
+        </div>
+      </form>
+      @if (erreurFenetre()) { <p class="bandeau" role="alert">{{ erreurFenetre() }}</p> }
+      <div class="pied">
+        @if (supportEdite()) { <button class="btn clair" type="button" (click)="annulerSupport()">Annuler la modification</button> }
+        <button class="btn clair" type="button" (click)="fermer()">Fermer</button>
+        <button class="btn indigo" type="button" [disabled]="enCours()" (click)="enregistrerSupport()">{{ enCours() ? 'Enregistrement…' : (supportEdite() ? 'Enregistrer' : 'Ajouter le support') }}</button>
+      </div>
+    </app-modal>
+  }
+}
