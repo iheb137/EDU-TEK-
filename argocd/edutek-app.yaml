@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: edutek
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/iheb137/EDU-TEK-.git
+    targetRevision: main          # la branche surveillée
+    path: k8s                     # le dossier des manifestes
+  destination:
+    server: https://kubernetes.default.svc   # = ce cluster
+    namespace: edutek
+  syncPolicy:
+    automated:
+      prune: true       # supprime du cluster ce qui a été retiré de Git
+      selfHeal: true    # annule les modifications faites à la main
