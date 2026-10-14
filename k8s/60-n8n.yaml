@@ -1,0 +1,98 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: n8n-data
+  namespace: edutek
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: n8n
+  namespace: edutek
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate                      # base SQLite sur un disque RWO
+  selector:
+    matchLabels:
+      app: n8n
+  template:
+    metadata:
+      labels:
+        app: n8n
+    spec:
+      enableServiceLinks: false         # évite la variable parasite N8N_PORT=tcp://...
+      securityContext:
+        fsGroup: 1000                   # l'utilisateur "node" de l'image peut écrire
+      containers:
+        - name: n8n
+          image: n8nio/n8n:2.29.1
+          ports:
+            - containerPort: 5678
+          env:
+            - { name: N8N_HOST, value: n8n.localhost }
+            - { name: N8N_PROTOCOL, value: http }
+            - { name: N8N_PORT, value: "5678" }
+            - { name: WEBHOOK_URL, value: "http://n8n.localhost/" }
+            - { name: N8N_SECURE_COOKIE, value: "false" }   # pas de HTTPS en local
+            - { name: GENERIC_TIMEZONE, value: Africa/Tunis }
+            - { name: TZ, value: Africa/Tunis }
+            - { name: N8N_DIAGNOSTICS_ENABLED, value: "false" }
+            - name: N8N_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef: { name: edutek-n8n, key: N8N_ENCRYPTION_KEY }
+          volumeMounts:
+            - name: data
+              mountPath: /home/node/.n8n
+          startupProbe:
+            httpGet: { path: /healthz, port: 5678 }
+            periodSeconds: 5
+            failureThreshold: 36        # jusqu'à 3 min au 1er démarrage
+          readinessProbe:
+            httpGet: { path: /healthz, port: 5678 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: 5678 }
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits:   { memory: 1Gi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: n8n-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: n8n
+  namespace: edutek
+spec:
+  selector:
+    app: n8n
+  ports:
+    - port: 5678
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: n8n
+  namespace: edutek
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: n8n.localhost               # http://n8n.localhost → n8n
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: n8n
+                port:
+                  number: 5678
