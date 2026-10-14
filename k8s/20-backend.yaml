@@ -1,0 +1,92 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: edutek-backend-config
+  namespace: edutek
+data:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/edutek_db
+  SPRING_JPA_SHOW_SQL: "false"
+  APP_SEED_ADMIN_EMAIL: admin@tekup.tn
+  APP_SEED_PLATEFORME_EMAIL: plateforme@edutek.local
+  APP_IA_MODE: http
+  APP_IA_URL: http://ia:8000
+  APP_STOCKAGE_DOSSIER: /app/uploads
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: backend-uploads
+  namespace: edutek
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: edutek
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      securityContext:
+        fsGroup: 10001                     # l'utilisateur edutek peut écrire dans le volume
+      containers:
+        - name: backend
+          image: edutek-backend:dev
+          imagePullPolicy: IfNotPresent    # utilise l'image chargée dans minikube
+          ports:
+            - containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: edutek-backend-config
+            - secretRef:
+                name: edutek-app
+          env:
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef: { name: edutek-db, key: POSTGRES_USER }
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef: { name: edutek-db, key: POSTGRES_PASSWORD }
+          volumeMounts:
+            - name: uploads
+              mountPath: /app/uploads
+          startupProbe:
+            tcpSocket: { port: 8080 }
+            periodSeconds: 5
+            failureThreshold: 30           # 30 x 5 s = 150 s maximum pour démarrer
+          readinessProbe:
+            tcpSocket: { port: 8080 }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: 8080 }
+            periodSeconds: 20
+            failureThreshold: 3
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits:   { memory: 1Gi }
+      volumes:
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: backend-uploads
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend          # = le nom attendu par nginx (BACKEND_URL=http://backend:8080)
+  namespace: edutek
+spec:
+  selector:
+    app: backend
+  ports:
+    - port: 8080

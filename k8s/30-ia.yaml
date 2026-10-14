@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: ia-stockage
+  namespace: edutek
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ia
+  namespace: edutek
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate                 # un seul pod à la fois sur le disque (RWO)
+  selector:
+    matchLabels:
+      app: ia
+  template:
+    metadata:
+      labels:
+        app: ia
+    spec:
+      containers:
+        - name: ia
+          image: edutek-ia:dev
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          env:
+            - name: IA_MODELS_DIR
+              value: /srv/stockage/models
+            - name: IA_DATA_DIR
+              value: /srv/stockage/data
+            - name: IA_BOOTSTRAP
+              value: "1"
+          envFrom:
+            - secretRef:
+                name: edutek-ia
+          volumeMounts:
+            - name: stockage
+              mountPath: /srv/stockage
+          startupProbe:
+            httpGet: { path: /health, port: 8000 }
+            periodSeconds: 5
+            failureThreshold: 60   # jusqu'à 5 min (entraînement initial)
+          readinessProbe:
+            httpGet: { path: /health, port: 8000 }
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            periodSeconds: 30
+            timeoutSeconds: 5
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits:   { memory: 1536Mi }
+      volumes:
+        - name: stockage
+          persistentVolumeClaim:
+            claimName: ia-stockage
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ia                 # = APP_IA_URL=http://ia:8000 dans la ConfigMap du backend
+  namespace: edutek
+spec:
+  selector:
+    app: ia
+  ports:
+    - port: 8000
